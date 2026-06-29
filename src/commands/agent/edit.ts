@@ -1,7 +1,5 @@
 import { EditAgentOptionsSchema } from '../../core/validation/schemas.js';
-
-import { NodeFileSystem } from '../../core/certificates/adapters/filesystem.js';
-import { AgentRegistry } from '../../core/agent/registry.js';
+import { Container } from '../../core/container.js';
 
 export interface EditAgentOptions {
   name: string;
@@ -11,10 +9,9 @@ export interface EditAgentOptions {
 }
 
 export async function editAgentConfig(options: EditAgentOptions): Promise<void> {
-  // Validate input options
   const validated = EditAgentOptionsSchema.parse(options);
-  const { name, port, host, remoteUrl } = validated;
+  const { name, ...changes } = validated;
 
-  const registry = new AgentRegistry(new NodeFileSystem());
-  await registry.update(name, { port, host, remoteUrl });
+  const container = Container.getInstance();
+  await container.agentRegistry.update(name, changes);
 }

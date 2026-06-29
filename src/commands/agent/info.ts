@@ -1,4 +1,4 @@
-import { NodeFileSystem } from '../../core/certificates/adapters/filesystem.js';
+import { Container } from '../../core/container.js';
 import { AgentRegistry } from '../../core/agent/registry.js';
 
 export interface AgentDetails {
@@ -20,8 +20,8 @@ export interface AgentDetails {
 }
 
 export async function getAgentInfo(name: string): Promise<AgentDetails> {
-  const registry = new AgentRegistry(new NodeFileSystem());
-  const details = await registry.get(name);
+  const container = Container.getInstance();
+  const details = await container.agentRegistry.get(name);
 
   if (!details) {
     return {

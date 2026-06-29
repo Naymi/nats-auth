@@ -1,5 +1,5 @@
-import { NodeFileSystem } from '../../core/certificates/adapters/filesystem.js';
-import { AgentRegistry, AgentSummary } from '../../core/agent/registry.js';
+import { Container } from '../../core/container.js';
+import { AgentSummary } from '../../core/agent/registry.js';
 
 export interface AgentInfo {
   name: string;
@@ -11,8 +11,8 @@ export interface AgentInfo {
 }
 
 export async function listAgents(): Promise<AgentInfo[]> {
-  const registry = new AgentRegistry(new NodeFileSystem());
-  const agents = await registry.list();
+  const container = Container.getInstance();
+  const agents = await container.agentRegistry.list();
 
   return agents.map((agent: AgentSummary): AgentInfo => ({
     name: agent.name,
