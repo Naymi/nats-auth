@@ -2,6 +2,7 @@ import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { DEFAULT_CONFIG } from '../../config/defaults.js';
+import { NATSConfigBuilder } from '../config-builder/nats-config-builder.js';
 
 export async function generateAgentConfig(
   rootCertsDir: string,
@@ -20,38 +21,26 @@ export async function generateAgentConfig(
 
   const { agent } = DEFAULT_CONFIG;
 
-  const config = `
-# Agent NATS Server Configuration (Leaf Node)
-# Agent name: ${name}
-port: ${port}
-host: ${host}
-
-# JetStream configuration
-jetstream {
-  store_dir: "${agentJetStreamDir}"
-  max_memory_store: ${agent.jetstream.maxMemoryStore}
-  max_file_store: ${agent.jetstream.maxFileStore}
-}
-
-leafnodes {
-  remotes = [
-    {
-      url: "${agent.remoteUrl}"
-      tls {
-        cert_file: "${leafCertPath}"
-        key_file: "${leafKeyPath}"
-        ca_file: "${rootCertPath}"
-        verify: true
-      }
-    }
-  ]
-}
-
-# Logging
-debug: ${agent.logging.debug}
-trace: ${agent.logging.trace}
-logtime: ${agent.logging.logtime}
-`;
+  const builder = new NATSConfigBuilder();
+  const config = builder.leafNodeConfig({
+    port,
+    host,
+    jetstream: {
+      storeDir: agentJetStreamDir,
+      maxMemoryStore: agent.jetstream.maxMemoryStore,
+      maxFileStore: agent.jetstream.maxFileStore,
+    },
+    remote: {
+      url: agent.remoteUrl,
+      tls: {
+        certFile: leafCertPath,
+        keyFile: leafKeyPath,
+        caFile: rootCertPath,
+        verify: true,
+      },
+    },
+    logging: agent.logging,
+  });
 
   const configPath = path.join(agentConfigDir, `${name}.conf`);
 
