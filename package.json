@@ -1,0 +1,26 @@
+{
+  "name": "nats-auth",
+  "version": "1.0.0",
+  "type": "module",
+  "bin": "./dist/cli.js",
+  "scripts": {
+    "build": "tsc",
+    "build:clean": "rm -rf dist && yarn build",
+    "cli": "tsx src/cli.ts",
+    "gen:main": "tsx src/cli.ts gen:main",
+    "gen:agent": "tsx src/cli.ts gen:agent",
+    "start:main": "nats-server -c config/main.conf",
+    "start:agent": "nats-server -c config/agent.conf",
+    "setup": "tsx src/cli.ts setup",
+    "clean": "tsx src/cli.ts clean"
+  },
+  "dependencies": {
+    "@types/node": "^20.14.0",
+    "commander": "^15.0.0",
+    "tsx": "^4.15.0"
+  },
+  "packageManager": "yarn@4.17.0",
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}
