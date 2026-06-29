@@ -1,0 +1,104 @@
+name: Documentation
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - '**.md'
+      - '.github/workflows/docs.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - '**.md'
+  workflow_dispatch:
+
+jobs:
+  markdown-lint:
+    name: Lint Markdown
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Lint Markdown files
+        uses: DavidAnson/markdownlint-cli2-action@v16
+        with:
+          globs: |
+            **/*.md
+            !node_modules
+            !.yarn
+
+  link-check:
+    name: Check Links
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check links in Markdown files
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          use-quiet-mode: 'yes'
+          use-verbose-mode: 'no'
+          config-file: '.github/markdown-link-check.json'
+          folder-path: '.'
+          file-path: './README.md'
+
+  docs-consistency:
+    name: Check Documentation Consistency
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Check required documentation files
+        run: |
+          echo "Checking required documentation files..."
+
+          required_files=(
+            "README.md"
+            "CLAUDE.md"
+            "PRD.md"
+            "QUICKSTART.md"
+          )
+
+          missing_files=()
+
+          for file in "${required_files[@]}"; do
+            if [ ! -f "$file" ]; then
+              missing_files+=("$file")
+            fi
+          done
+
+          if [ ${#missing_files[@]} -gt 0 ]; then
+            echo "❌ Missing required documentation files:"
+            printf '%s\n' "${missing_files[@]}"
+            exit 1
+          fi
+
+          echo "✅ All required documentation files present"
+
+      - name: Check documentation dates
+        run: |
+          echo "Checking if documentation dates need updating..."
+
+          current_date=$(date +%Y-%m-%d)
+
+          # Check if main docs have recent update markers
+          for file in README.md CLAUDE.md PRD.md QUICKSTART.md; do
+            if [ -f "$file" ]; then
+              echo "Checking $file..."
+              # Warning only, not failing
+              if ! grep -q "2026" "$file"; then
+                echo "⚠️  $file may need date update"
+              fi
+            fi
+          done
