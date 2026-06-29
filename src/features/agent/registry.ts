@@ -1,6 +1,8 @@
 import { execSync } from 'node:child_process';
 import path from 'node:path';
 
+import getPort from 'get-port';
+
 import { DEFAULT_CONFIG } from '../../config/defaults.js';
 import { CERTS_DIR } from '../../utils/paths.js';
 import { CertificateAuthority } from '../certificate-authority/certificate-authority.js';
@@ -157,7 +159,8 @@ export class AgentRegistry {
   }
 
   async create(spec: CreateAgentSpec): Promise<void> {
-    const { name, port, host } = spec;
+    const { name, host } = spec;
+    let { port } = spec;
 
     // Check if Root CA exists
     const rootCAExists = await this.fs.exists(path.join(CERTS_DIR, 'rootCA.crt'));
@@ -165,8 +168,8 @@ export class AgentRegistry {
       throw new Error('Root CA not found. Generate it first with "gen:main" or "setup" command.');
     }
 
-    // Check for port conflicts
-    await this.checkPortConflict(port);
+    // Find available port (will auto-search if provided port is taken)
+    port = await this.findAvailablePort(port);
 
     const agentDir = getAgentDir(name);
 
@@ -266,6 +269,49 @@ export class AgentRegistry {
           `Port ${port} is already used by agent '${agent.name}'. Please choose a different port.`
         );
       }
+    }
+  }
+
+  async findAvailablePort(preferredPort?: number): Promise<number> {
+    if (!preferredPort) {
+      // Start from default port if no preference
+      preferredPort = DEFAULT_CONFIG.agent.defaultPort;
+    }
+
+    try {
+      // Try to check if preferred port has conflicts
+      await this.checkPortConflict(preferredPort);
+      console.log(`✓ Port ${preferredPort} is available`);
+      return preferredPort;
+    } catch (error) {
+      // Port conflict detected, search for available port
+      console.log(`⚠️  Port ${preferredPort} is already in use`);
+      console.log(`🔍 Searching for available port...`);
+
+      // Get list of all used ports
+      const agents = await this.list();
+      const usedPorts = new Set<number>();
+
+      for (const agent of agents) {
+        if (agent.hasConfig) {
+          const details = await this.get(agent.name);
+          if (details?.port) {
+            usedPorts.add(details.port);
+          }
+        }
+      }
+
+      // Find available port starting from preferred port
+      let candidatePort = await getPort({ port: preferredPort });
+
+      // Make sure the port is not used by any agent
+      while (usedPorts.has(candidatePort)) {
+        console.log(`   Port ${candidatePort} found but already used by an agent, trying next...`);
+        candidatePort = await getPort({ port: candidatePort + 1 });
+      }
+
+      console.log(`✓ Found available port: ${candidatePort}`);
+      return candidatePort;
     }
   }
 
