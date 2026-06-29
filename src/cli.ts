@@ -3,19 +3,19 @@ import { Command } from 'commander';
 import { ZodError } from 'zod';
 import { confirm } from '@inquirer/prompts';
 
-import { createAgent } from './features/agent/create-agent.js';
-import { editAgentConfig } from './features/agent/edit-agent.js';
-import { getAgentInfo } from './features/agent/get-agent-info.js';
-import { listAgents } from './features/agent/list-agents.js';
-import { startAgent } from './features/agent/start-agent.js';
-import { NodeFileSystem } from './features/agent/adapters/filesystem.js';
-import { AgentRegistry } from './features/agent/registry.js';
-import { CertificateAuthority } from './features/certificate-authority/certificate-authority.js';
-import { NodeOpenSSL } from './features/certificate-authority/adapters/openssl.js';
-import { generateServerConfig } from './features/server/generate-config.js';
-import { startServer } from './features/server/start-server.js';
-import { ensureDir, removeDir } from './utils/fs.js';
-import { AGENTS_DIR, CERTS_DIR, CONFIG_DIR } from './utils/paths.js';
+import { createAgent } from './commands/agent/create.js';
+import { editAgentConfig } from './commands/agent/edit.js';
+import { getAgentInfo } from './commands/agent/info.js';
+import { listAgents } from './commands/agent/list.js';
+import { startAgent } from './commands/agent/start.js';
+import { NodeFileSystem } from './core/certificates/adapters/filesystem.js';
+import { AgentRegistry } from './core/agent/registry.js';
+import { CertificateAuthority } from './core/certificates/authority.js';
+import { NodeOpenSSL } from './core/certificates/adapters/openssl.js';
+import { generateServerConfig } from './commands/server/generate-config.js';
+import { startServer } from './commands/server/start.js';
+import { ensureDir, removeDir } from './shared/fs.js';
+import { AGENTS_DIR, CERTS_DIR, CONFIG_DIR } from './shared/paths.js';
 
 function handleError(error: unknown): void {
   if (error instanceof ZodError) {

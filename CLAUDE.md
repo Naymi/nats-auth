@@ -137,25 +137,52 @@ nats-server -c agents/<agent-name>/config/<agent-name>.conf
 ```
 src/
   cli.ts                    # Main CLI entry point
-  features/
-    ca/
-      generate-root-ca.ts   # Root CA generation
+  
+  core/                     # Core domain logic
+    certificates/           # Certificate management
+      authority.ts          # CertificateAuthority class
+      adapters/
+        openssl.ts          # OpenSSL adapter
+        filesystem.ts       # Filesystem adapter
+    config/                 # NATS configuration
+      builder.ts            # NATSConfigBuilder class
+      defaults.ts           # Default configuration constants
+    agent/                  # Agent registry and management
+      registry.ts           # AgentRegistry class
+      paths.ts              # Agent path helpers
+    validation/             # Validation logic
+      schemas.ts            # Zod schemas
+      validators.ts         # Validation functions
+  
+  commands/                 # CLI command implementations
     server/
-      generate-certificate.ts  # Main server certificate generation
-      generate-config.ts       # Main server NATS configuration
-      start-server.ts          # Start main server using nats-server
+      generate-certificate.ts  # Server certificate generation
+      generate-config.ts       # Server NATS configuration
+      start.ts                 # Start main server
     agent/
-      generate-certificate.ts  # Leaf node certificate generation (supports custom names)
-      generate-config.ts       # Agent NATS configuration (supports custom port/host)
-      list-agents.ts           # List all agents with their status
-      create-agent.ts          # Create new agent with certificate and config
-      get-agent-info.ts        # Get detailed agent information
-      edit-agent.ts            # Edit agent configuration
-      start-agent.ts           # Start agent using nats-server
-      edit-agent.ts            # Edit agent configuration
-  utils/
-    fs.ts                   # File system utilities (ensureDir, removeDir)
-    paths.ts                # Path constants (CERTS_DIR, CONFIG_DIR, AGENTS_DIR)
+      create.ts             # Create new agent
+      edit.ts               # Edit agent configuration
+      generate-certificate.ts  # Agent certificate generation
+      generate-config.ts       # Agent NATS configuration
+      info.ts               # Get agent details
+      list.ts               # List all agents
+      start.ts              # Start agent
+  
+  shared/                   # Shared utilities
+    fs.ts                   # File system helpers
+    logger.ts               # Logging utilities
+    paths.ts                # Global path constants
+  
+  types/                    # Global type definitions
+    nats-config.ts          # NATS configuration interfaces
+
+tests/                      # Test files
+  core/
+    certificates/
+    config/
+    agent/
+  shared/
+
 certs/                      # Generated TLS certificates (gitignored)
   rootCA.key/crt            # Root Certificate Authority
   main.key/crt              # Main server certificate
@@ -169,10 +196,6 @@ agents/                     # Agent directories (gitignored)
       <agent-name>.conf     # Agent NATS config
     jetstream/              # Agent JetStream data (created at runtime)
 jetstream/                  # JetStream data for main server (gitignored)
-scripts/                    # Legacy scripts (deprecated)
-  generate-main.ts
-  generate-agent.ts
-  cli.ts
 ```
 
 ### CLI Implementation
@@ -189,14 +212,21 @@ The CLI tool (`src/cli.ts`) uses Commander.js and orchestrates feature modules:
 - **agent:edit** - Edit agent configuration
 - **agent:start** - Start an agent using nats-server
 
-Each feature is isolated in its own directory under `src/features/`:
-- **ca/** - Root Certificate Authority generation
-- **server/** - Main server certificate and configuration
-- **agent/** - Leaf node certificate and configuration
+Core modules are organized in `src/core/`:
+- **certificates/** - Certificate Authority and adapters (OpenSSL, filesystem)
+- **config/** - NATS configuration builder and defaults
+- **agent/** - Agent registry and path management
+- **validation/** - Zod schemas and validators
 
-Shared utilities are in `src/utils/`:
+Command handlers in `src/commands/` are thin wrappers that:
+- Parse CLI arguments
+- Call core modules
+- Display results to the user
+
+Shared utilities in `src/shared/`:
 - **fs.ts** - Directory management (create, remove)
 - **paths.ts** - Centralized path constants
+- **logger.ts** - Logging utilities
 
 All commands include proper error handling, colored output with emojis, and helpful messages.
 
