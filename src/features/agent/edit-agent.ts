@@ -1,4 +1,4 @@
-import { EditAgentOptionsSchema } from '../../utils/validation.js';
+import { EditAgentOptionsSchema } from '../../types/schemas.js';
 
 import { NodeFileSystem } from './adapters/filesystem.js';
 import { AgentRegistry } from './registry.js';
