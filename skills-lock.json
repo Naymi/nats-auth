@@ -43,6 +43,12 @@
       "skillPath": "skills/ripgrep/SKILL.md",
       "computedHash": "bc5ed0a5b897b7e06db597c00d0e1554dc1db3671009cdeab7945addf0708808"
     },
+    "solid": {
+      "source": "ramziddin/solid-skills",
+      "sourceType": "github",
+      "skillPath": "skills/solid/SKILL.md",
+      "computedHash": "60de610a3c143f79f69552b7da60298bb46c9e8d80ab16c4c111b025823345d1"
+    },
     "to-prd": {
       "source": "mattpocock/skills",
       "sourceType": "github",
