@@ -9,6 +9,9 @@ CLI-инструмент для генерации TLS сертификатов 
 - 🎯 Простой CLI интерфейс на базе Commander.js
 - 🌳 Поддержка архитектуры Leaf Node
 - 🔒 Взаимная TLS аутентификация
+- 👥 Менеджмент множественных агентов с уникальными именами
+- 📊 Просмотр статуса и детальной информации об агентах
+- ✏️ Редактирование конфигураций агентов без пересоздания сертификатов
 
 ## Требования
 
@@ -30,13 +33,15 @@ yarn build
 Генерация всех сертификатов и конфигураций одной командой:
 
 ```bash
-yarn setup
+yarn cli init
+# or
+node dist/cli.js init
 ```
 
 Это создаст:
 - Root CA (центр сертификации)
 - Сертификат и конфигурацию main сервера
-- Сертификат и конфигурацию leaf node агента
+- Default агент в директории agents/agent/
 
 ### CLI Команды
 
@@ -44,19 +49,53 @@ yarn setup
 
 ```bash
 # Генерация Root CA и main сервера
-yarn gen:main
+yarn cli server:init
 
-# Генерация leaf node (требует предварительного выполнения gen:main)
-yarn gen:agent
+# Генерация default агента (требует предварительного выполнения server:init)
+yarn cli agent:init
 ```
+
+#### Менеджмент агентов
+
+```bash
+# Просмотр списка всех агентов
+yarn cli agent:list
+
+# Создание нового агента с кастомными параметрами
+yarn cli agent:create <имя> [--port <порт>] [--host <хост>]
+
+# Примеры:
+yarn cli agent:create worker-1
+yarn cli agent:create worker-2 --port 4224 --host 0.0.0.0
+
+# Получение детальной информации об агенте
+yarn cli agent:info <имя>
+
+# Редактирование конфигурации агента
+yarn cli agent:edit <имя> [--port <порт>] [--host <хост>] [--remote-url <url>]
+
+# Примеры:
+yarn cli agent:edit worker-1 --port 5000
+yarn cli agent:edit worker-2 --host 127.0.0.1 --remote-url tls://localhost:7422
+```
+
+**Возможности менеджмента агентов:**
+- **agent:list** - показывает все агенты с их статусом (сертификат, конфиг)
+- **agent:create** - создает новый агент с уникальным именем и параметрами
+- **agent:info** - выводит детальную информацию: порт, хост, валидность сертификата, пути к файлам
+- **agent:edit** - обновляет конфигурацию агента без пересоздания сертификатов
 
 #### Очистка
 
 Удаление всех сгенерированных сертификатов и конфигураций:
 
 ```bash
-yarn clean
+yarn cli clean
+# or
+node dist/cli.js clean
 ```
+
+Удаляет директории: `certs/`, `config/`, `agents/`
 
 #### Справка
 
@@ -69,25 +108,27 @@ yarn cli --help
 Справка по конкретной команде:
 
 ```bash
-yarn cli gen:main --help
+yarn cli server:init --help
+yarn cli agent:create --help
 ```
 
 ### Запуск серверов
 
 #### Main сервер
 ```bash
-yarn start:main
-```
-
-#### Agent (Leaf Node)
-```bash
-yarn start:agent
-```
-
-Или используйте `nats-server` напрямую:
-```bash
 nats-server -c config/main.conf
-nats-server -c config/agent.conf
+```
+
+#### Default agent
+```bash
+nats-server -c agents/agent/config/agent.conf
+```
+
+#### Custom agents
+```bash
+nats-server -c agents/<имя-агента>/config/<имя-агента>.conf
+# Например:
+nats-server -c agents/worker-1/config/worker-1.conf
 ```
 
 ## Архитектура
@@ -120,18 +161,29 @@ nats-server -c config/agent.conf
 │   │   │   ├── generate-certificate.ts    # Main server certificate
 │   │   │   └── generate-config.ts         # Main server configuration
 │   │   └── agent/
-│   │       ├── generate-certificate.ts    # Leaf node certificate
-│   │       └── generate-config.ts         # Agent configuration
+│   │       ├── generate-certificate.ts    # Leaf node certificate (с поддержкой имен)
+│   │       ├── generate-config.ts         # Agent configuration (с кастомными параметрами)
+│   │       ├── list-agents.ts             # Список агентов
+│   │       ├── create-agent.ts            # Создание агента
+│   │       ├── get-agent-info.ts          # Информация об агенте
+│   │       └── edit-agent.ts              # Редактирование конфигурации
 │   └── utils/
 │       ├── fs.ts                   # File system utilities
 │       └── paths.ts                # Path constants
 ├── certs/                          # Сгенерированные сертификаты (gitignored)
 │   ├── rootCA.key/crt              # Root Certificate Authority
-│   ├── main.key/crt                # Сертификат main сервера
-│   └── leaf.key/crt                # Сертификат Leaf node
+│   └── main.key/crt                # Сертификат main сервера
 ├── config/                         # Сгенерированные конфигурации NATS (gitignored)
-│   ├── main.conf                   # Конфигурация main сервера
-│   └── agent.conf                  # Конфигурация Leaf node
+│   └── main.conf                   # Конфигурация main сервера
+├── agents/                         # Директории агентов (gitignored)
+│   └── <имя-агента>/               # Индивидуальная директория агента
+│       ├── certs/                  # Сертификаты агента
+│       │   ├── <имя-агента>.key    # Приватный ключ
+│       │   └── <имя-агента>.crt    # Сертификат
+│       ├── config/                 # Конфигурация агента
+│       │   └── <имя-агента>.conf   # NATS конфигурация
+│       └── jetstream/              # JetStream данные (создается при запуске)
+├── jetstream/                      # JetStream данные main сервера (gitignored)
 └── package.json
 ```
 
@@ -140,11 +192,18 @@ nats-server -c config/agent.conf
 Проект организован по фичам:
 - **ca/** - Генерация Root Certificate Authority
 - **server/** - Сертификат и конфигурация main сервера
-- **agent/** - Сертификат и конфигурация leaf node
+- **agent/** - Сертификаты, конфигурации и менеджмент leaf nodes
 
 Утилиты в `src/utils/`:
 - **fs.ts** - Управление директориями (создание, удаление)
 - **paths.ts** - Централизованные константы путей
+
+### Структура директории агента
+
+Каждый агент имеет свою изолированную директорию:
+- **certs/** - Сертификаты и ключи агента
+- **config/** - NATS конфигурация с абсолютными путями
+- **jetstream/** - Директория для JetStream данных (создается при первом запуске)
 
 ## Детали сертификатов
 

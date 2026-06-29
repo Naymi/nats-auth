@@ -20,52 +20,80 @@ The project includes a CLI tool built with Commander.js that provides commands f
 ### CLI Usage
 
 ```bash
-yarn cli [command]      # Run CLI commands
+yarn cli [command]      # Run CLI commands during development
 yarn cli --help         # Show all available commands
+
+# Or use the built CLI directly
+node dist/cli.js [command]
+nats-auth [command]     # If installed globally
 ```
 
 ### Setup (First Time)
 ```bash
-yarn setup              # Generate all certificates and configurations
+yarn cli init           # Development
 # or
-yarn cli setup
+node dist/cli.js init   # From build
 ```
 
 This generates everything in one command:
 - Root CA (certificate authority)
 - Main server certificate and configuration
-- Leaf node certificate and agent configuration
+- Default agent in agents/agent/ directory
 
 ### Certificate Generation (Individual)
 ```bash
-yarn gen:main           # Generate Root CA and main server certificate/config
-yarn gen:agent          # Generate leaf node certificate/config (run gen:main first)
-# or use CLI directly
-yarn cli gen:main
-yarn cli gen:agent
+yarn cli server:init    # Generate Root CA and main server
+yarn cli agent:init     # Generate default agent (requires server:init first)
 ```
 
-**Important**: `gen:agent` will fail if Root CA doesn't exist. Always run `gen:main` before `gen:agent`.
+**Important**: `agent:init` will fail if Root CA doesn't exist. Always run `server:init` before `agent:init`.
+
+### Agent Management
+```bash
+# List all agents
+yarn cli agent:list
+# or
+node dist/cli.js agent:list
+
+# Create a new agent with custom port and host
+yarn cli agent:create <name> [--port <port>] [--host <host>]
+# Example:
+yarn cli agent:create worker-1 --port 4224 --host 0.0.0.0
+
+# Get detailed information about an agent
+yarn cli agent:info <name>
+
+# Edit agent configuration
+yarn cli agent:edit <name> [--port <port>] [--host <host>] [--remote-url <url>]
+# Example:
+yarn cli agent:edit worker-1 --port 5000
+```
+
+**Agent Management Features:**
+- **agent:list** - Shows all agents with certificate and config status
+- **agent:create** - Generates certificate and config for a new agent in isolated directory
+- **agent:info** - Displays detailed information including certificate validity, port, host, and paths
+- **agent:edit** - Updates agent configuration (port, host, remote URL) without regenerating certificates
 
 ### Cleanup
 ```bash
-yarn clean              # Remove all generated certificates and configurations
-# or
 yarn cli clean
+# or
+node dist/cli.js clean
 ```
 
-This removes both `certs/` and `config/` directories.
+This removes `certs/`, `config/`, and `agents/` directories.
 
 ### Running Servers
 ```bash
-yarn start:main         # Start main NATS server on ports 4222 (client) and 7422 (leafnode)
-yarn start:agent        # Start agent leaf node on port 4223
-```
-
-Or use nats-server directly:
-```bash
+# Main server
 nats-server -c config/main.conf
-nats-server -c config/agent.conf
+
+# Default agent
+nats-server -c agents/agent/config/agent.conf
+
+# Custom agents
+nats-server -c agents/<agent-name>/config/<agent-name>.conf
 ```
 
 ## Project Structure
@@ -80,20 +108,28 @@ src/
       generate-certificate.ts  # Main server certificate generation
       generate-config.ts       # Main server NATS configuration
     agent/
-      generate-certificate.ts  # Leaf node certificate generation
-      generate-config.ts       # Agent NATS configuration
+      generate-certificate.ts  # Leaf node certificate generation (supports custom names)
+      generate-config.ts       # Agent NATS configuration (supports custom port/host)
+      list-agents.ts           # List all agents with their status
+      create-agent.ts          # Create new agent with certificate and config
+      get-agent-info.ts        # Get detailed agent information
+      edit-agent.ts            # Edit agent configuration
   utils/
     fs.ts                   # File system utilities (ensureDir, removeDir)
-    paths.ts                # Path constants (CERTS_DIR, CONFIG_DIR)
+    paths.ts                # Path constants (CERTS_DIR, CONFIG_DIR, AGENTS_DIR)
 certs/                      # Generated TLS certificates (gitignored)
   rootCA.key/crt            # Root Certificate Authority
   main.key/crt              # Main server certificate
-  leaf.key/crt              # Leaf node certificate
 config/                     # Generated NATS configurations (gitignored)
   main.conf                 # Main server config with absolute cert paths
-  agent.conf                # Leaf node config with absolute cert paths
+agents/                     # Agent directories (gitignored)
+  <agent-name>/             # Individual agent directory
+    certs/                  # Agent certificates
+      <agent-name>.key/crt  # Agent certificate and key
+    config/                 # Agent configuration
+      <agent-name>.conf     # Agent NATS config
+    jetstream/              # Agent JetStream data (created at runtime)
 jetstream/                  # JetStream data for main server (gitignored)
-jetstream-agent/            # JetStream data for agent (gitignored)
 scripts/                    # Legacy scripts (deprecated)
   generate-main.ts
   generate-agent.ts
@@ -103,10 +139,14 @@ scripts/                    # Legacy scripts (deprecated)
 ### CLI Implementation
 
 The CLI tool (`src/cli.ts`) uses Commander.js and orchestrates feature modules:
-- **setup** - Full setup (Root CA + main server + agent)
-- **gen:main** - Generate Root CA and main server components
-- **gen:agent** - Generate leaf node components
-- **clean** - Remove all generated files
+- **init** - Full setup (Root CA + main server + default agent)
+- **server:init** - Generate Root CA and main server components
+- **agent:init** - Generate default agent in agents/agent/ directory
+- **clean** (alias: clear) - Remove all generated files (certs, config, agents)
+- **agent:list** - List all agents with status
+- **agent:create** - Create new agent with custom name and options in separate directory
+- **agent:info** - Show detailed agent information
+- **agent:edit** - Edit agent configuration
 
 Each feature is isolated in its own directory under `src/features/`:
 - **ca/** - Root Certificate Authority generation

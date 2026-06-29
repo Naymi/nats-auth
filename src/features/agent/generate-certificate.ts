@@ -4,15 +4,19 @@ import { constants } from 'fs';
 import { join } from 'path';
 import { hostname } from 'os';
 
-export async function generateLeafCertificate(certsDir: string): Promise<void> {
-  console.log('🔐 Generating Leaf Node certificate...');
+export async function generateLeafCertificate(
+  rootCertsDir: string,
+  agentCertsDir: string,
+  name: string = 'leaf'
+): Promise<void> {
+  console.log(`🔐 Generating certificate for agent: ${name}...`);
 
-  const leafKeyPath = join(certsDir, 'leaf.key');
-  const leafCsrPath = join(certsDir, 'leaf.csr');
-  const leafCertPath = join(certsDir, 'leaf.crt');
-  const rootKeyPath = join(certsDir, 'rootCA.key');
-  const rootCertPath = join(certsDir, 'rootCA.crt');
-  const extFilePath = join(certsDir, 'leaf.ext');
+  const leafKeyPath = join(agentCertsDir, `${name}.key`);
+  const leafCsrPath = join(agentCertsDir, `${name}.csr`);
+  const leafCertPath = join(agentCertsDir, `${name}.crt`);
+  const rootKeyPath = join(rootCertsDir, 'rootCA.key');
+  const rootCertPath = join(rootCertsDir, 'rootCA.crt');
+  const extFilePath = join(agentCertsDir, `${name}.ext`);
 
   try {
     await access(rootKeyPath, constants.F_OK);
@@ -41,7 +45,7 @@ IP.1 = 127.0.0.1
   execSync(`openssl genrsa -out ${leafKeyPath} 4096`, { stdio: 'inherit' });
   execSync(
     `openssl req -new -key ${leafKeyPath} -out ${leafCsrPath} ` +
-    `-subj "/C=US/ST=State/L=City/O=Organization/CN=leaf-node"`,
+    `-subj "/C=US/ST=State/L=City/O=Organization/CN=${name}"`,
     { stdio: 'inherit' }
   );
   execSync(
@@ -50,5 +54,5 @@ IP.1 = 127.0.0.1
     { stdio: 'inherit' }
   );
 
-  console.log('✅ Leaf Node certificate generated');
+  console.log(`✅ Certificate for '${name}' generated`);
 }

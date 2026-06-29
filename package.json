@@ -6,13 +6,7 @@
   "scripts": {
     "build": "tsc",
     "build:clean": "rm -rf dist && yarn build",
-    "cli": "tsx src/cli.ts",
-    "gen:main": "tsx src/cli.ts gen:main",
-    "gen:agent": "tsx src/cli.ts gen:agent",
-    "start:main": "nats-server -c config/main.conf",
-    "start:agent": "nats-server -c config/agent.conf",
-    "setup": "tsx src/cli.ts setup",
-    "clean": "tsx src/cli.ts clean"
+    "cli": "tsx src/cli.ts"
   },
   "dependencies": {
     "@types/node": "^20.14.0",

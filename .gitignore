@@ -176,6 +176,9 @@ certs/
 # Generated NATS configurations
 config/
 
+# Generated agents with individual directories
+agents/
+
 # JetStream data directories
 jetstream/
 jetstream-agent/

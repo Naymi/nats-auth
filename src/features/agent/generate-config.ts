@@ -1,20 +1,30 @@
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
 
-export async function generateAgentConfig(certsDir: string, configDir: string): Promise<void> {
-  console.log('📝 Generating Agent configuration...');
+export async function generateAgentConfig(
+  rootCertsDir: string,
+  agentCertsDir: string,
+  agentConfigDir: string,
+  agentJetStreamDir: string,
+  name: string = 'agent',
+  port: number = 4223,
+  host: string = '127.0.0.1'
+): Promise<void> {
+  console.log(`📝 Generating configuration for agent: ${name}...`);
 
-  const leafKeyPath = join(certsDir, 'leaf.key');
-  const leafCertPath = join(certsDir, 'leaf.crt');
-  const rootCertPath = join(certsDir, 'rootCA.crt');
+  const leafKeyPath = join(agentCertsDir, `${name}.key`);
+  const leafCertPath = join(agentCertsDir, `${name}.crt`);
+  const rootCertPath = join(rootCertsDir, 'rootCA.crt');
 
   const config = `
 # Agent NATS Server Configuration (Leaf Node)
-port: 4223
+# Agent name: ${name}
+port: ${port}
+host: ${host}
 
 # JetStream configuration
 jetstream {
-  store_dir: "./jetstream-agent"
+  store_dir: "${agentJetStreamDir}"
   max_memory_store: 1GB
   max_file_store: 10GB
 }
@@ -39,8 +49,8 @@ trace: false
 logtime: true
 `;
 
-  const configPath = join(configDir, 'agent.conf');
+  const configPath = join(agentConfigDir, `${name}.conf`);
   await writeFile(configPath, config);
 
-  console.log('✅ Agent configuration saved to:', configPath);
+  console.log(`✅ Configuration for '${name}' saved to: ${configPath}`);
 }
