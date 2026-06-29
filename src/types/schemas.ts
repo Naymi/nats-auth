@@ -45,6 +45,7 @@ export const CreateAgentOptionsSchema = z.object({
   name: AgentNameSchema,
   port: PortSchema.default(4223),
   host: HostSchema.default('127.0.0.1'),
+  replace: z.boolean().optional().default(false),
 });
 
 /**

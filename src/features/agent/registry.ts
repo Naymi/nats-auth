@@ -44,6 +44,7 @@ export interface CreateAgentSpec {
   name: string;
   port: number;
   host: string;
+  replace?: boolean;
 }
 
 export interface AgentChanges {
@@ -159,7 +160,7 @@ export class AgentRegistry {
   }
 
   async create(spec: CreateAgentSpec): Promise<void> {
-    const { name, host } = spec;
+    const { name, host, replace = false } = spec;
     let { port } = spec;
 
     // Check if Root CA exists
@@ -172,6 +173,17 @@ export class AgentRegistry {
     port = await this.findAvailablePort(port);
 
     const agentDir = getAgentDir(name);
+
+    // Check if agent already exists
+    const agentExists = await this.exists(name);
+    
+    // Remove existing agent if replacing
+    if (agentExists && replace) {
+      console.log(`🗑️  Removing existing agent: ${name}`);
+      await this.fs.removeDir(agentDir);
+    } else if (agentExists && !replace) {
+      throw new Error(`Agent '${name}' already exists. Use --replace flag to overwrite or confirm replacement when prompted.`);
+    }
 
     // Create agent atomically using transaction
     await this.withTransaction(agentDir, async (tempDir) => {

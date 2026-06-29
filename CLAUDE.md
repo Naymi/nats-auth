@@ -56,9 +56,13 @@ yarn cli agent:list
 node dist/cli.js agent:list
 
 # Create a new agent with custom port and host
-yarn cli agent:create <name> [--port <port>] [--host <host>]
+yarn cli agent:create <name> [--port <port>] [--host <host>] [--replace]
 # Example:
 yarn cli agent:create worker-1 --port 4224 --host 0.0.0.0
+
+# If agent exists, you'll be prompted to replace it
+# Use --replace flag to skip the prompt and force replacement
+yarn cli agent:create worker-1 --replace
 
 # Get detailed information about an agent
 yarn cli agent:info <name>
@@ -71,7 +75,7 @@ yarn cli agent:edit worker-1 --port 5000
 
 **Agent Management Features:**
 - **agent:list** - Shows all agents with certificate and config status
-- **agent:create** - Generates certificate and config for a new agent in isolated directory
+- **agent:create** - Generates certificate and config for a new agent in isolated directory. If agent exists, prompts for confirmation to replace (use --replace to skip prompt)
 - **agent:info** - Displays detailed information including certificate validity, port, host, and paths
 - **agent:edit** - Updates agent configuration (port, host, remote URL) without regenerating certificates
 

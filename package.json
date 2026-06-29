@@ -17,6 +17,7 @@
     "format:check": "prettier --check 'src/**/*.ts'"
   },
   "dependencies": {
+    "@inquirer/prompts": "^8.5.2",
     "@types/node": "^20.14.0",
     "commander": "^15.0.0",
     "get-port": "^7.2.0",

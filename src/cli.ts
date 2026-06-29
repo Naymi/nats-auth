@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
 import { ZodError } from 'zod';
+import { confirm } from '@inquirer/prompts';
 
 import { createAgent } from './features/agent/create-agent.js';
 import { editAgentConfig } from './features/agent/edit-agent.js';
 import { getAgentInfo } from './features/agent/get-agent-info.js';
 import { listAgents } from './features/agent/list-agents.js';
 import { NodeFileSystem } from './features/agent/adapters/filesystem.js';
+import { AgentRegistry } from './features/agent/registry.js';
 import { CertificateAuthority } from './features/certificate-authority/certificate-authority.js';
 import { NodeOpenSSL } from './features/certificate-authority/adapters/openssl.js';
 import { generateServerConfig } from './features/server/generate-config.js';
@@ -156,6 +158,7 @@ program
   .description('Create a new agent with certificate and configuration')
   .option('-p, --port <port>', 'Agent port', '4223')
   .option('-h, --host <host>', 'Agent host', '127.0.0.1')
+  .option('-r, --replace', 'Replace existing agent if it exists', false)
   .action(async (name: string, options) => {
     const openssl = new NodeOpenSSL();
     const available = await openssl.checkAvailable();
@@ -166,10 +169,31 @@ program
     }
 
     try {
+      let shouldReplace = options.replace;
+
+      // Check if agent exists and prompt user if --replace flag not provided
+      if (!shouldReplace) {
+        const registry = new AgentRegistry(new NodeFileSystem());
+        const exists = await registry.exists(name);
+
+        if (exists) {
+          shouldReplace = await confirm({
+            message: `Agent '${name}' already exists. Replace it?`,
+            default: false,
+          });
+
+          if (!shouldReplace) {
+            console.log('❌ Operation cancelled.');
+            process.exit(0);
+          }
+        }
+      }
+
       await createAgent({
         name,
         port: Number.parseInt(options.port, 10),
         host: options.host,
+        replace: shouldReplace,
       });
     } catch (error) {
       handleError(error);
