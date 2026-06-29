@@ -2,8 +2,11 @@ import { generateLeafCertificate } from './generate-certificate.js';
 import { generateAgentConfig } from './generate-config.js';
 import { ensureDir } from '../../utils/fs.js';
 import { CERTS_DIR, getAgentDir, getAgentCertsDir, getAgentConfigDir, getAgentJetStreamDir } from '../../utils/paths.js';
+import { CreateAgentOptionsSchema, checkPortConflict } from '../../utils/validation.js';
+import { AgentTransaction } from '../../utils/transaction.js';
 import { access } from 'fs/promises';
 import { constants } from 'fs';
+import { join } from 'path';
 
 export interface CreateAgentOptions {
   name: string;
@@ -12,7 +15,9 @@ export interface CreateAgentOptions {
 }
 
 export async function createAgent(options: CreateAgentOptions): Promise<void> {
-  const { name, port = 4223, host = '127.0.0.1' } = options;
+  // Validate input options
+  const validated = CreateAgentOptionsSchema.parse(options);
+  const { name, port, host } = validated;
 
   // Check if Root CA exists
   try {
@@ -22,26 +27,42 @@ export async function createAgent(options: CreateAgentOptions): Promise<void> {
     process.exit(1);
   }
 
+  // Check for port conflicts with existing agents
+  await checkPortConflict(port);
+
   const agentDir = getAgentDir(name);
-  const agentCertsDir = getAgentCertsDir(name);
-  const agentConfigDir = getAgentConfigDir(name);
-  const agentJetStreamDir = getAgentJetStreamDir(name);
+  const transaction = new AgentTransaction();
 
-  await ensureDir(agentDir);
-  await ensureDir(agentCertsDir);
-  await ensureDir(agentConfigDir);
+  try {
+    // Begin transaction - create temporary directory
+    const tempDir = await transaction.begin(agentDir);
+    const tempCertsDir = join(tempDir, 'certs');
+    const tempConfigDir = join(tempDir, 'config');
+    const tempJetStreamDir = join(tempDir, 'jetstream');
 
-  console.log(`🔧 Creating agent: ${name}`);
-  console.log(`   Directory: ${agentDir}`);
-  console.log(`   Port: ${port}`);
-  console.log(`   Host: ${host}\n`);
+    await ensureDir(tempCertsDir);
+    await ensureDir(tempConfigDir);
 
-  await generateLeafCertificate(CERTS_DIR, agentCertsDir, name);
-  await generateAgentConfig(CERTS_DIR, agentCertsDir, agentConfigDir, agentJetStreamDir, name, port, host);
+    console.log(`🔧 Creating agent: ${name}`);
+    console.log(`   Directory: ${agentDir}`);
+    console.log(`   Port: ${port}`);
+    console.log(`   Host: ${host}\n`);
 
-  console.log(`\n✨ Agent '${name}' created successfully!`);
-  console.log(`   Directory: ${agentDir}`);
-  console.log(`   Certificate: ${agentCertsDir}/${name}.crt`);
-  console.log(`   Config: ${agentConfigDir}/${name}.conf`);
-  console.log(`\nStart with: nats-server -c ${agentConfigDir}/${name}.conf`);
+    // Generate certificates and config in temporary directory
+    await generateLeafCertificate(CERTS_DIR, tempCertsDir, name);
+    await generateAgentConfig(CERTS_DIR, tempCertsDir, tempConfigDir, tempJetStreamDir, name, port, host);
+
+    // Commit transaction - atomically move to target directory
+    await transaction.commit();
+
+    console.log(`\n✨ Agent '${name}' created successfully!`);
+    console.log(`   Directory: ${agentDir}`);
+    console.log(`   Certificate: ${getAgentCertsDir(name)}/${name}.crt`);
+    console.log(`   Config: ${getAgentConfigDir(name)}/${name}.conf`);
+    console.log(`\nStart with: nats-server -c ${getAgentConfigDir(name)}/${name}.conf`);
+  } catch (error) {
+    // Rollback on any error
+    await transaction.cleanup();
+    throw error;
+  }
 }

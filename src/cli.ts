@@ -11,6 +11,22 @@ import { getAgentInfo } from './features/agent/get-agent-info.js';
 import { editAgentConfig } from './features/agent/edit-agent.js';
 import { ensureDir, removeDir } from './utils/fs.js';
 import { CERTS_DIR, CONFIG_DIR, AGENTS_DIR } from './utils/paths.js';
+import { checkOpenSSLAvailable } from './utils/openssl.js';
+import { ZodError } from 'zod';
+
+function handleError(error: unknown): void {
+  if (error instanceof ZodError) {
+    console.error('❌ Validation error:');
+    error.issues.forEach((issue) => {
+      console.error(`   ${issue.message}`);
+    });
+    process.exit(1);
+  } else if (error instanceof Error) {
+    console.error(`❌ Error: ${error.message}`);
+    process.exit(1);
+  }
+  throw error;
+}
 
 const program = new Command();
 
@@ -23,6 +39,8 @@ program
   .command('init')
   .description('Generate all certificates and configurations (main + default agent)')
   .action(async () => {
+    checkOpenSSLAvailable();
+
     await ensureDir(CERTS_DIR);
     await ensureDir(CONFIG_DIR);
 
@@ -44,6 +62,8 @@ program
   .command('server:init')
   .description('Generate Root CA, main server certificate and configuration')
   .action(async () => {
+    checkOpenSSLAvailable();
+
     await ensureDir(CERTS_DIR);
     await ensureDir(CONFIG_DIR);
 
@@ -60,6 +80,8 @@ program
   .command('agent:init')
   .description('Generate default agent (leaf node) certificate and configuration')
   .action(async () => {
+    checkOpenSSLAvailable();
+
     console.log('🚀 Generating default agent...\n');
 
     await createAgent({ name: 'agent', port: 4223, host: '127.0.0.1' });
@@ -115,11 +137,17 @@ program
   .option('-p, --port <port>', 'Agent port', '4223')
   .option('-h, --host <host>', 'Agent host', '127.0.0.1')
   .action(async (name: string, options) => {
-    await createAgent({
-      name,
-      port: parseInt(options.port, 10),
-      host: options.host,
-    });
+    checkOpenSSLAvailable();
+
+    try {
+      await createAgent({
+        name,
+        port: parseInt(options.port, 10),
+        host: options.host,
+      });
+    } catch (error) {
+      handleError(error);
+    }
   });
 
 program
@@ -195,7 +223,11 @@ program
       process.exit(1);
     }
 
-    await editAgentConfig(editOptions);
+    try {
+      await editAgentConfig(editOptions);
+    } catch (error) {
+      handleError(error);
+    }
   });
 
 program.parse();

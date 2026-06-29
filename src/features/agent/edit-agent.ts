@@ -1,6 +1,7 @@
 import { readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
 import { AGENTS_DIR } from '../../utils/paths.js';
+import { EditAgentOptionsSchema, checkPortConflict } from '../../utils/validation.js';
 
 export interface EditAgentOptions {
   name: string;
@@ -10,7 +11,10 @@ export interface EditAgentOptions {
 }
 
 export async function editAgentConfig(options: EditAgentOptions): Promise<void> {
-  const { name, port, host, remoteUrl } = options;
+  // Validate input options
+  const validated = EditAgentOptionsSchema.parse(options);
+  const { name, port, host, remoteUrl } = validated;
+
   const configPath = join(AGENTS_DIR, name, 'config', `${name}.conf`);
 
   console.log(`✏️  Editing configuration for agent: ${name}...`);
@@ -23,7 +27,9 @@ export async function editAgentConfig(options: EditAgentOptions): Promise<void> 
     process.exit(1);
   }
 
+  // Check for port conflicts if port is being changed
   if (port !== undefined) {
+    await checkPortConflict(port, name);
     configContent = configContent.replace(/^port:\s*\d+/m, `port: ${port}`);
     console.log(`   Updated port: ${port}`);
   }

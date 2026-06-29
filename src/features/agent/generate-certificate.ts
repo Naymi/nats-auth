@@ -1,8 +1,8 @@
-import { execSync } from 'child_process';
-import { writeFile, access } from 'fs/promises';
+import { writeFile, access, rm } from 'fs/promises';
 import { constants } from 'fs';
 import { join } from 'path';
 import { hostname } from 'os';
+import { executeOpenSSL } from '../../utils/openssl.js';
 
 export async function generateLeafCertificate(
   rootCertsDir: string,
@@ -26,8 +26,9 @@ export async function generateLeafCertificate(
     process.exit(1);
   }
 
-  const hostName = hostname();
-  const extContent = `
+  try {
+    const hostName = hostname();
+    const extContent = `
 authorityKeyIdentifier=keyid,issuer
 basicConstraints=CA:FALSE
 keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
@@ -40,19 +41,33 @@ DNS.2 = ${hostName}
 IP.1 = 127.0.0.1
 `;
 
-  await writeFile(extFilePath, extContent);
+    await writeFile(extFilePath, extContent);
 
-  execSync(`openssl genrsa -out ${leafKeyPath} 4096`, { stdio: 'inherit' });
-  execSync(
-    `openssl req -new -key ${leafKeyPath} -out ${leafCsrPath} ` +
-    `-subj "/C=US/ST=State/L=City/O=Organization/CN=${name}"`,
-    { stdio: 'inherit' }
-  );
-  execSync(
-    `openssl x509 -req -in ${leafCsrPath} -CA ${rootCertPath} -CAkey ${rootKeyPath} ` +
-    `-CAcreateserial -out ${leafCertPath} -days 825 -sha256 -extfile ${extFilePath}`,
-    { stdio: 'inherit' }
-  );
+    executeOpenSSL(
+      `openssl genrsa -out ${leafKeyPath} 4096`,
+      `generate private key for agent ${name}`
+    );
 
-  console.log(`✅ Certificate for '${name}' generated`);
+    executeOpenSSL(
+      `openssl req -new -key ${leafKeyPath} -out ${leafCsrPath} ` +
+      `-subj "/C=US/ST=State/L=City/O=Organization/CN=${name}"`,
+      `generate CSR for agent ${name}`
+    );
+
+    executeOpenSSL(
+      `openssl x509 -req -in ${leafCsrPath} -CA ${rootCertPath} -CAkey ${rootKeyPath} ` +
+      `-CAcreateserial -out ${leafCertPath} -days 825 -sha256 -extfile ${extFilePath}`,
+      `sign certificate for agent ${name}`
+    );
+
+    console.log(`✅ Certificate for '${name}' generated`);
+  } finally {
+    // Cleanup temporary files
+    try {
+      await rm(leafCsrPath);
+      await rm(extFilePath);
+    } catch {
+      // Ignore cleanup errors
+    }
+  }
 }
