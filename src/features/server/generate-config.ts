@@ -1,5 +1,5 @@
 import { writeFile } from 'fs/promises';
-import { join } from 'path';
+import { join, resolve } from 'path';
 import { DEFAULT_CONFIG } from '../../config/defaults.js';
 
 export async function generateServerConfig(certsDir: string, configDir: string): Promise<void> {
@@ -11,6 +11,9 @@ export async function generateServerConfig(certsDir: string, configDir: string):
 
   const { server } = DEFAULT_CONFIG;
 
+  // Use absolute path for JetStream store
+  const jetStreamStoreDir = resolve(server.jetstream.storeDir);
+
   const config = `
 # Main NATS Server Configuration
 # Client connections without TLS
@@ -18,7 +21,7 @@ port: ${server.clientPort}
 
 # JetStream configuration
 jetstream {
-  store_dir: "${server.jetstream.storeDir}"
+  store_dir: "${jetStreamStoreDir}"
   max_memory_store: ${server.jetstream.maxMemoryStore}
   max_file_store: ${server.jetstream.maxFileStore}
 }

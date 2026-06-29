@@ -3,7 +3,7 @@ import { Command } from 'commander';
 import { generateRootCA } from './features/ca/generate-root-ca.js';
 import { generateServerCertificate } from './features/server/generate-certificate.js';
 import { generateServerConfig } from './features/server/generate-config.js';
-import { generateLeafCertificate } from './features/agent/generate-certificate.js';
+import { generateAgentCertificate } from './features/agent/generate-certificate.js';
 import { generateAgentConfig } from './features/agent/generate-config.js';
 import { listAgents } from './features/agent/list-agents.js';
 import { createAgent } from './features/agent/create-agent.js';

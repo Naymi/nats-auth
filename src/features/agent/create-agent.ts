@@ -1,4 +1,4 @@
-import { generateLeafCertificate } from './generate-certificate.js';
+import { generateAgentCertificate } from './generate-certificate.js';
 import { generateAgentConfig } from './generate-config.js';
 import { ensureDir } from '../../utils/fs.js';
 import { CERTS_DIR, getAgentDir, getAgentCertsDir, getAgentConfigDir, getAgentJetStreamDir } from '../../utils/paths.js';
@@ -49,7 +49,7 @@ export async function createAgent(options: CreateAgentOptions): Promise<void> {
     console.log(`   Host: ${host}\n`);
 
     // Generate certificates and config in temporary directory
-    await generateLeafCertificate(CERTS_DIR, tempCertsDir, name);
+    await generateAgentCertificate(CERTS_DIR, tempCertsDir, name);
     await generateAgentConfig(CERTS_DIR, tempCertsDir, tempConfigDir, tempJetStreamDir, name, port, host);
 
     // Commit transaction - atomically move to target directory

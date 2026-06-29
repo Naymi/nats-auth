@@ -4,10 +4,10 @@ import { join } from 'path';
 import { generateCertificateFromCA } from '../../utils/certificate.js';
 import { DEFAULT_CONFIG } from '../../config/defaults.js';
 
-export async function generateLeafCertificate(
+export async function generateAgentCertificate(
   rootCertsDir: string,
   agentCertsDir: string,
-  name: string = 'leaf'
+  name: string = 'agent'
 ): Promise<void> {
   console.log(`🔐 Generating certificate for agent: ${name}...`);
 
