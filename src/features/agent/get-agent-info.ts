@@ -54,7 +54,7 @@ export async function getAgentInfo(name: string): Promise<AgentDetails> {
         validFrom: validFromMatch ? validFromMatch[1].trim() : 'Unknown',
         validTo: validToMatch ? validToMatch[1].trim() : 'Unknown',
       };
-    } catch (error) {
+    } catch {
       // Certificate info extraction failed
     }
   } catch {

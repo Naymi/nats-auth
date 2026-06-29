@@ -17,7 +17,7 @@ export function generateRootCA(certsDir: string): void {
 
   executeOpenSSL(
     `openssl req -x509 -new -nodes -key ${rootKeyPath} -sha256 -days ${rootCA.validityDays} ` +
-    `-out ${rootCertPath} -subj "/C=${subject.country}/ST=${subject.state}/L=${subject.locality}/O=${subject.organization}/CN=Root CA"`,
+      `-out ${rootCertPath} -subj "/C=${subject.country}/ST=${subject.state}/L=${subject.locality}/O=${subject.organization}/CN=Root CA"`,
     'generate Root CA certificate'
   );
 

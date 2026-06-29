@@ -1,0 +1,12 @@
+dist
+node_modules
+*.json
+certs
+config
+agents
+jetstream
+.claude
+.agents
+.serena
+coverage
+yarn.lock

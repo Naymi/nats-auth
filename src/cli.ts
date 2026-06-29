@@ -3,8 +3,6 @@ import { Command } from 'commander';
 import { generateRootCA } from './features/ca/generate-root-ca.js';
 import { generateServerCertificate } from './features/server/generate-certificate.js';
 import { generateServerConfig } from './features/server/generate-config.js';
-import { generateAgentCertificate } from './features/agent/generate-certificate.js';
-import { generateAgentConfig } from './features/agent/generate-config.js';
 import { listAgents } from './features/agent/list-agents.js';
 import { createAgent } from './features/agent/create-agent.js';
 import { getAgentInfo } from './features/agent/get-agent-info.js';
@@ -204,7 +202,12 @@ program
   .option('-h, --host <host>', 'Update agent host')
   .option('-r, --remote-url <url>', 'Update remote server URL')
   .action(async (name: string, options) => {
-    const editOptions: any = { name };
+    const editOptions: {
+      name: string;
+      port?: number;
+      host?: string;
+      remoteUrl?: string;
+    } = { name };
 
     if (options.port) {
       editOptions.port = parseInt(options.port, 10);

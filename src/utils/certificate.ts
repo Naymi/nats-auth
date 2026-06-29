@@ -64,10 +64,7 @@ IP.1 = 127.0.0.1
     await writeFile(extFilePath, extContent);
 
     // Generate private key
-    executeOpenSSL(
-      `openssl genrsa -out ${keyPath} ${keySize}`,
-      `generate private key for ${name}`
-    );
+    executeOpenSSL(`openssl genrsa -out ${keyPath} ${keySize}`, `generate private key for ${name}`);
 
     // Generate CSR
     const subjectString = `/C=${subject.country}/ST=${subject.state}/L=${subject.locality}/O=${subject.organization}/CN=${commonName}`;
@@ -79,7 +76,7 @@ IP.1 = 127.0.0.1
     // Sign certificate
     executeOpenSSL(
       `openssl x509 -req -in ${csrPath} -CA ${caCertPath} -CAkey ${caKeyPath} ` +
-      `-CAcreateserial -out ${certPath} -days ${validityDays} -sha256 -extfile ${extFilePath}`,
+        `-CAcreateserial -out ${certPath} -days ${validityDays} -sha256 -extfile ${extFilePath}`,
       `sign certificate for ${name}`
     );
 

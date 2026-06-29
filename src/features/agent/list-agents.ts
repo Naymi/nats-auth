@@ -42,7 +42,7 @@ export async function listAgents(): Promise<AgentInfo[]> {
         agentDir,
       });
     }
-  } catch (error) {
+  } catch {
     // AGENTS_DIR doesn't exist or is empty
   }
 

@@ -88,10 +88,7 @@ export async function isPortInUse(port: number): Promise<boolean> {
  * @param port - Port number to check
  * @param excludeAgent - Agent name to exclude from check (for editing)
  */
-export async function checkPortConflict(
-  port: number,
-  excludeAgent?: string
-): Promise<void> {
+export async function checkPortConflict(port: number, excludeAgent?: string): Promise<void> {
   try {
     const agentDirs = await readdir(AGENTS_DIR);
 

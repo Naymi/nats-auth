@@ -44,10 +44,7 @@ export async function editAgentConfig(options: EditAgentOptions): Promise<void> 
   }
 
   if (remoteUrl !== undefined) {
-    configContent = configContent.replace(
-      /url:\s*"[^"]+"/,
-      `url: "${remoteUrl}"`
-    );
+    configContent = configContent.replace(/url:\s*"[^"]+"/, `url: "${remoteUrl}"`);
     console.log(`   Updated remote URL: ${remoteUrl}`);
   }
 

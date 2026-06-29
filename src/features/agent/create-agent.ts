@@ -1,7 +1,7 @@
 import { generateAgentCertificate } from './generate-certificate.js';
 import { generateAgentConfig } from './generate-config.js';
 import { ensureDir } from '../../utils/fs.js';
-import { CERTS_DIR, getAgentDir, getAgentCertsDir, getAgentConfigDir, getAgentJetStreamDir } from '../../utils/paths.js';
+import { CERTS_DIR, getAgentDir, getAgentCertsDir, getAgentConfigDir } from '../../utils/paths.js';
 import { CreateAgentOptionsSchema, checkPortConflict } from '../../utils/validation.js';
 import { AgentTransaction } from '../../utils/transaction.js';
 import { access } from 'fs/promises';
@@ -23,7 +23,9 @@ export async function createAgent(options: CreateAgentOptions): Promise<void> {
   try {
     await access(`${CERTS_DIR}/rootCA.crt`, constants.F_OK);
   } catch {
-    console.error('❌ Error: Root CA not found. Generate it first with "gen:main" or "setup" command.');
+    console.error(
+      '❌ Error: Root CA not found. Generate it first with "gen:main" or "setup" command.'
+    );
     process.exit(1);
   }
 
@@ -50,7 +52,15 @@ export async function createAgent(options: CreateAgentOptions): Promise<void> {
 
     // Generate certificates and config in temporary directory
     await generateAgentCertificate(CERTS_DIR, tempCertsDir, name);
-    await generateAgentConfig(CERTS_DIR, tempCertsDir, tempConfigDir, tempJetStreamDir, name, port, host);
+    await generateAgentConfig(
+      CERTS_DIR,
+      tempCertsDir,
+      tempConfigDir,
+      tempJetStreamDir,
+      name,
+      port,
+      host
+    );
 
     // Commit transaction - atomically move to target directory
     await transaction.commit();
