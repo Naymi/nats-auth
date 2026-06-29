@@ -3,9 +3,10 @@ import path from 'node:path';
 
 import { DEFAULT_CONFIG } from '../../config/defaults.js';
 import { CERTS_DIR } from '../../utils/paths.js';
+import { CertificateAuthority } from '../certificate-authority/certificate-authority.js';
+import { NodeOpenSSL } from '../certificate-authority/adapters/openssl.js';
 
 import { FileSystemAdapter } from './adapters/filesystem.js';
-import { generateAgentCertificate } from './generate-certificate.js';
 import { generateAgentConfig } from './generate-config.js';
 import {
   getAgentCertsDir,
@@ -183,9 +184,19 @@ export class AgentRegistry {
       console.log(`   Port: ${port}`);
       console.log(`   Host: ${host}\n`);
 
-      // Generate certificates and config in temporary directory
-      await generateAgentCertificate(CERTS_DIR, tempCertsDir, name);
-      await generateAgentConfig(CERTS_DIR, tempCertsDir, tempConfigDir, tempJetStreamDir, name, port, host);
+      // Generate certificates using CA module
+      const ca = new CertificateAuthority(new NodeOpenSSL(), this.fs);
+      const rootCA = {
+        keyPath: path.join(CERTS_DIR, 'rootCA.key'),
+        certPath: path.join(CERTS_DIR, 'rootCA.crt'),
+      };
+      await ca.issueLeafCert(rootCA, name, { certsDir: tempCertsDir });
+
+      // Generate config with final paths (not temp paths)
+      const finalCertsDir = getAgentCertsDir(name);
+      const finalConfigDir = getAgentConfigDir(name);
+      const finalJetStreamDir = getAgentJetStreamDir(name);
+      await generateAgentConfig(CERTS_DIR, finalCertsDir, tempConfigDir, finalJetStreamDir, name, port, host);
 
       console.log(`\n✨ Agent '${name}' created successfully!`);
       console.log(`   Directory: ${agentDir}`);

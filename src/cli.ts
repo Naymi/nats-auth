@@ -6,11 +6,11 @@ import { createAgent } from './features/agent/create-agent.js';
 import { editAgentConfig } from './features/agent/edit-agent.js';
 import { getAgentInfo } from './features/agent/get-agent-info.js';
 import { listAgents } from './features/agent/list-agents.js';
-import { generateRootCA } from './features/ca/generate-root-ca.js';
-import { generateServerCertificate } from './features/server/generate-certificate.js';
+import { NodeFileSystem } from './features/agent/adapters/filesystem.js';
+import { CertificateAuthority } from './features/certificate-authority/certificate-authority.js';
+import { NodeOpenSSL } from './features/certificate-authority/adapters/openssl.js';
 import { generateServerConfig } from './features/server/generate-config.js';
 import { ensureDir, removeDir } from './utils/fs.js';
-import { checkOpenSSLAvailable } from './utils/openssl.js';
 import { AGENTS_DIR, CERTS_DIR, CONFIG_DIR } from './utils/paths.js';
 
 function handleError(error: unknown): void {
@@ -38,15 +38,22 @@ program
   .command('init')
   .description('Generate all certificates and configurations (main + default agent)')
   .action(async () => {
-    checkOpenSSLAvailable();
+    const openssl = new NodeOpenSSL();
+    const available = await openssl.checkAvailable();
+    if (!available) {
+      console.error('❌ OpenSSL not found in PATH');
+      console.error('Please install OpenSSL and ensure it is in your PATH');
+      process.exit(1);
+    }
 
     await ensureDir(CERTS_DIR);
     await ensureDir(CONFIG_DIR);
 
     console.log('🚀 Starting full setup...\n');
 
-    generateRootCA(CERTS_DIR);
-    await generateServerCertificate(CERTS_DIR);
+    const ca = new CertificateAuthority(openssl, new NodeFileSystem());
+    const rootCA = await ca.issueRootCA({ certsDir: CERTS_DIR });
+    await ca.issueServerCert(rootCA, { certsDir: CERTS_DIR });
     await generateServerConfig(CERTS_DIR, CONFIG_DIR);
 
     // Create default agent using new structure
@@ -61,15 +68,22 @@ program
   .command('server:init')
   .description('Generate Root CA, main server certificate and configuration')
   .action(async () => {
-    checkOpenSSLAvailable();
+    const openssl = new NodeOpenSSL();
+    const available = await openssl.checkAvailable();
+    if (!available) {
+      console.error('❌ OpenSSL not found in PATH');
+      console.error('Please install OpenSSL and ensure it is in your PATH');
+      process.exit(1);
+    }
 
     await ensureDir(CERTS_DIR);
     await ensureDir(CONFIG_DIR);
 
     console.log('🚀 Generating main server components...\n');
 
-    generateRootCA(CERTS_DIR);
-    await generateServerCertificate(CERTS_DIR);
+    const ca = new CertificateAuthority(openssl, new NodeFileSystem());
+    const rootCA = await ca.issueRootCA({ certsDir: CERTS_DIR });
+    await ca.issueServerCert(rootCA, { certsDir: CERTS_DIR });
     await generateServerConfig(CERTS_DIR, CONFIG_DIR);
 
     console.log('\n✨ Main server setup complete!');
@@ -79,7 +93,13 @@ program
   .command('agent:init')
   .description('Generate default agent (leaf node) certificate and configuration')
   .action(async () => {
-    checkOpenSSLAvailable();
+    const openssl = new NodeOpenSSL();
+    const available = await openssl.checkAvailable();
+    if (!available) {
+      console.error('❌ OpenSSL not found in PATH');
+      console.error('Please install OpenSSL and ensure it is in your PATH');
+      process.exit(1);
+    }
 
     console.log('🚀 Generating default agent...\n');
 
@@ -137,7 +157,13 @@ program
   .option('-p, --port <port>', 'Agent port', '4223')
   .option('-h, --host <host>', 'Agent host', '127.0.0.1')
   .action(async (name: string, options) => {
-    checkOpenSSLAvailable();
+    const openssl = new NodeOpenSSL();
+    const available = await openssl.checkAvailable();
+    if (!available) {
+      console.error('❌ OpenSSL not found in PATH');
+      console.error('Please install OpenSSL and ensure it is in your PATH');
+      process.exit(1);
+    }
 
     try {
       await createAgent({
