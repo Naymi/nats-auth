@@ -1,5 +1,6 @@
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
+import { DEFAULT_CONFIG } from '../../config/defaults.js';
 
 export async function generateServerConfig(certsDir: string, configDir: string): Promise<void> {
   console.log('📝 Generating Main Server configuration...');
@@ -8,21 +9,23 @@ export async function generateServerConfig(certsDir: string, configDir: string):
   const mainCertPath = join(certsDir, 'main.crt');
   const rootCertPath = join(certsDir, 'rootCA.crt');
 
+  const { server } = DEFAULT_CONFIG;
+
   const config = `
 # Main NATS Server Configuration
 # Client connections without TLS
-port: 4222
+port: ${server.clientPort}
 
 # JetStream configuration
 jetstream {
-  store_dir: "./jetstream"
-  max_memory_store: 1GB
-  max_file_store: 10GB
+  store_dir: "${server.jetstream.storeDir}"
+  max_memory_store: ${server.jetstream.maxMemoryStore}
+  max_file_store: ${server.jetstream.maxFileStore}
 }
 
 # Leaf node connections with TLS authentication
 leafnodes {
-  port: 7422
+  port: ${server.leafNodePort}
   tls {
     cert_file: "${mainCertPath}"
     key_file: "${mainKeyPath}"
@@ -32,9 +35,9 @@ leafnodes {
 }
 
 # Logging
-debug: false
-trace: false
-logtime: true
+debug: ${server.logging.debug}
+trace: ${server.logging.trace}
+logtime: ${server.logging.logtime}
 `;
 
   const configPath = join(configDir, 'main.conf');

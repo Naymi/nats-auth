@@ -1,5 +1,6 @@
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
+import { DEFAULT_CONFIG } from '../../config/defaults.js';
 
 export async function generateAgentConfig(
   rootCertsDir: string,
@@ -16,6 +17,8 @@ export async function generateAgentConfig(
   const leafCertPath = join(agentCertsDir, `${name}.crt`);
   const rootCertPath = join(rootCertsDir, 'rootCA.crt');
 
+  const { agent } = DEFAULT_CONFIG;
+
   const config = `
 # Agent NATS Server Configuration (Leaf Node)
 # Agent name: ${name}
@@ -25,14 +28,14 @@ host: ${host}
 # JetStream configuration
 jetstream {
   store_dir: "${agentJetStreamDir}"
-  max_memory_store: 1GB
-  max_file_store: 10GB
+  max_memory_store: ${agent.jetstream.maxMemoryStore}
+  max_file_store: ${agent.jetstream.maxFileStore}
 }
 
 leafnodes {
   remotes = [
     {
-      url: "tls://localhost:7422"
+      url: "${agent.remoteUrl}"
       tls {
         cert_file: "${leafCertPath}"
         key_file: "${leafKeyPath}"
@@ -44,9 +47,9 @@ leafnodes {
 }
 
 # Logging
-debug: false
-trace: false
-logtime: true
+debug: ${agent.logging.debug}
+trace: ${agent.logging.trace}
+logtime: ${agent.logging.logtime}
 `;
 
   const configPath = join(agentConfigDir, `${name}.conf`);

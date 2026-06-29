@@ -6,7 +6,11 @@
   "scripts": {
     "build": "tsc",
     "build:clean": "rm -rf dist && yarn build",
-    "cli": "tsx src/cli.ts"
+    "cli": "tsx src/cli.ts",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run",
+    "test:coverage": "vitest --coverage"
   },
   "dependencies": {
     "@types/node": "^20.14.0",
@@ -16,6 +20,8 @@
   },
   "packageManager": "yarn@4.17.0",
   "devDependencies": {
-    "typescript": "^6.0.3"
+    "@vitest/ui": "^4.1.9",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
   }
 }

@@ -1,60 +1,25 @@
-import { writeFile, rm } from 'fs/promises';
 import { join } from 'path';
-import { hostname } from 'os';
-import { executeOpenSSL } from '../../utils/openssl.js';
+import { generateCertificateFromCA } from '../../utils/certificate.js';
+import { DEFAULT_CONFIG } from '../../config/defaults.js';
 
 export async function generateServerCertificate(certsDir: string): Promise<void> {
   console.log('🔐 Generating Main Server certificate...');
 
-  const mainKeyPath = join(certsDir, 'main.key');
-  const mainCsrPath = join(certsDir, 'main.csr');
-  const mainCertPath = join(certsDir, 'main.crt');
   const rootKeyPath = join(certsDir, 'rootCA.key');
   const rootCertPath = join(certsDir, 'rootCA.crt');
-  const extFilePath = join(certsDir, 'main.ext');
 
-  try {
-    const hostName = hostname();
-    const extContent = `
-authorityKeyIdentifier=keyid,issuer
-basicConstraints=CA:FALSE
-keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
-extendedKeyUsage = serverAuth, clientAuth
-subjectAltName = @alt_names
+  const { certificate } = DEFAULT_CONFIG;
 
-[alt_names]
-DNS.1 = localhost
-DNS.2 = ${hostName}
-IP.1 = 127.0.0.1
-`;
+  await generateCertificateFromCA({
+    name: 'main',
+    commonName: 'main-server',
+    certsDir,
+    caKeyPath: rootKeyPath,
+    caCertPath: rootCertPath,
+    validityDays: certificate.validityDays,
+    keySize: certificate.keySize,
+    subject: certificate.subject,
+  });
 
-    await writeFile(extFilePath, extContent);
-
-    executeOpenSSL(
-      `openssl genrsa -out ${mainKeyPath} 4096`,
-      'generate Main Server private key'
-    );
-
-    executeOpenSSL(
-      `openssl req -new -key ${mainKeyPath} -out ${mainCsrPath} ` +
-      `-subj "/C=US/ST=State/L=City/O=Organization/CN=main-server"`,
-      'generate Main Server CSR'
-    );
-
-    executeOpenSSL(
-      `openssl x509 -req -in ${mainCsrPath} -CA ${rootCertPath} -CAkey ${rootKeyPath} ` +
-      `-CAcreateserial -out ${mainCertPath} -days 825 -sha256 -extfile ${extFilePath}`,
-      'sign Main Server certificate'
-    );
-
-    console.log('✅ Main Server certificate generated');
-  } finally {
-    // Cleanup temporary files
-    try {
-      await rm(mainCsrPath);
-      await rm(extFilePath);
-    } catch {
-      // Ignore cleanup errors
-    }
-  }
+  console.log('✅ Main Server certificate generated');
 }
