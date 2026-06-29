@@ -1,9 +1,11 @@
 import { generateAgentCertificate } from './generate-certificate.js';
 import { generateAgentConfig } from './generate-config.js';
 import { ensureDir } from '../../utils/fs.js';
-import { CERTS_DIR, getAgentDir, getAgentCertsDir, getAgentConfigDir } from '../../utils/paths.js';
-import { CreateAgentOptionsSchema, checkPortConflict } from '../../utils/validation.js';
-import { AgentTransaction } from '../../utils/transaction.js';
+import { CERTS_DIR } from '../../utils/paths.js';
+import { getAgentDir, getAgentCertsDir, getAgentConfigDir } from './paths.js';
+import { CreateAgentOptionsSchema } from '../../utils/validation.js';
+import { checkPortConflict } from './validation.js';
+import { AgentTransaction } from './transaction.js';
 import { access } from 'fs/promises';
 import { constants } from 'fs';
 import { join } from 'path';

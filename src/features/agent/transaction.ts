@@ -1,5 +1,5 @@
 import { rm, rename } from 'fs/promises';
-import { ensureDir } from './fs.js';
+import { ensureDir } from '../../utils/fs.js';
 
 /**
  * Transaction class for atomic agent creation

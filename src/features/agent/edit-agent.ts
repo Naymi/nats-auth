@@ -1,7 +1,8 @@
 import { readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
 import { AGENTS_DIR } from '../../utils/paths.js';
-import { EditAgentOptionsSchema, checkPortConflict } from '../../utils/validation.js';
+import { EditAgentOptionsSchema } from '../../utils/validation.js';
+import { checkPortConflict } from './validation.js';
 
 export interface EditAgentOptions {
   name: string;
