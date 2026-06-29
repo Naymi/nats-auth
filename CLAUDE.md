@@ -6,6 +6,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a NATS server setup demonstrating TLS-based authentication between a main server and leaf node agents. The project uses TypeScript scripts to generate TLS certificates (Root CA, server, and leaf node certificates) and NATS server configurations.
 
+**Architecture Style**: Clean Architecture with SOLID principles
+**Last Major Refactoring**: 2026-06-29 (Applied Clean Architecture and eliminated code duplication)
+
+The codebase follows industry best practices:
+- **Clean Architecture**: Core domain logic isolated from infrastructure concerns
+- **SOLID Principles**: Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, Dependency Inversion
+- **Dependency Injection**: All external dependencies injected via constructor
+- **Adapter Pattern**: OpenSSL and filesystem operations abstracted behind interfaces
+- **Value Objects**: Domain concepts like AgentName encapsulated in immutable classes
+- **Transaction Pattern**: Atomic operations with automatic rollback on failure
+
 ## Architecture
 
 - **Main Server**: Acts as the central NATS hub with TLS-enabled client connections (port 4222) and leaf node connections (port 7422). Includes JetStream for persistence and streaming.
@@ -214,9 +225,21 @@ The CLI tool (`src/cli.ts`) uses Commander.js and orchestrates feature modules:
 
 Core modules are organized in `src/core/`:
 - **certificates/** - Certificate Authority and adapters (OpenSSL, filesystem)
+  - `authority.ts` - CertificateAuthority class (main business logic)
+  - `adapters/openssl.ts` - OpenSSL command execution
+  - `adapters/filesystem.ts` - Certificate file I/O
 - **config/** - NATS configuration builder and defaults
+  - `builder.ts` - NATSConfigBuilder class (template-based config generation)
+  - `defaults.ts` - Default configuration constants
 - **agent/** - Agent registry and path management
+  - `registry.ts` - AgentRegistry class (agent lifecycle operations)
+  - `paths.ts` - Agent path helpers
+- **domain/** - Domain models and value objects
+  - `agent-name.ts` - AgentName value object with validation rules
 - **validation/** - Zod schemas and validators
+  - `schemas.ts` - Pure Zod schemas for input validation
+  - `validators.ts` - Runtime validation functions
+- **container.ts** - Dependency injection container (creates core services)
 
 Command handlers in `src/commands/` are thin wrappers that:
 - Parse CLI arguments
@@ -242,11 +265,39 @@ All certificates use:
 
 ## Development Notes
 
+### Architecture Principles
+
+- **Clean Architecture**: Core domain logic in `src/core/` has zero dependencies on infrastructure
+- **SOLID Principles Applied**:
+  - **Single Responsibility**: Each class has one clear purpose (CertificateAuthority, AgentRegistry, NATSConfigBuilder)
+  - **Open/Closed**: Adapters allow extending functionality without modifying core logic
+  - **Liskov Substitution**: Interfaces define contracts that implementations must honor
+  - **Interface Segregation**: Small, focused interfaces for OpenSSL and filesystem operations
+  - **Dependency Inversion**: Core depends on abstractions (interfaces), not concrete implementations
+- **Dependency Injection**: All external dependencies injected via constructor, managed by container
+- **Adapter Pattern**: OpenSSL and filesystem operations abstracted for testability
+- **Value Objects**: Domain concepts like AgentName encapsulated in immutable classes
+- **Transaction Pattern**: Atomic agent creation with automatic rollback on failure
+- **Builder Pattern**: NATSConfigBuilder constructs complex configurations step by step
+
+### Technical Details
+
 - CLI built with Commander.js for command management and help generation
-- Certificate generation uses `openssl` CLI via `execSync` to create certificates
+- Certificate generation uses `openssl` CLI via OpenSSLAdapter (abstracted for testing)
 - Configuration files use absolute paths to certificates (resolved at generation time)
 - All TLS connections require mutual verification (verify: true)
 - The leaf node authenticates to the main server using its client certificate signed by the shared Root CA
 - ES modules used throughout (import/export syntax)
-- Used yarn package manager
-- Used Promise API and async/await
+- Yarn package manager (v4.17.0+)
+- Promise API and async/await for all async operations
+- Vitest for unit testing with adapter mocking
+- Zod for runtime validation and type-safe schemas
+
+### Code Quality Standards
+
+- **No duplication**: Core logic consolidated in single-purpose classes
+- **Pure functions**: Configuration building has no side effects
+- **Immutability**: Value objects and domain models are immutable
+- **Error handling**: Descriptive errors with operation context
+- **Type safety**: TypeScript strict mode, Zod validation at boundaries
+- **Testability**: Adapter pattern enables testing without external dependencies

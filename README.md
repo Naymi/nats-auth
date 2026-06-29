@@ -62,11 +62,15 @@ yarn cli agent:init
 yarn cli agent:list
 
 # Создание нового агента с кастомными параметрами
-yarn cli agent:create <имя> [--port <порт>] [--host <хост>]
+yarn cli agent:create <имя> [--port <порт>] [--host <хост>] [--replace]
 
 # Примеры:
 yarn cli agent:create worker-1
 yarn cli agent:create worker-2 --port 4224 --host 0.0.0.0
+
+# Если агент существует, будет запрошено подтверждение замены
+# Используйте --replace для автоматической замены без подтверждения
+yarn cli agent:create worker-1 --replace
 
 # Получение детальной информации об агенте
 yarn cli agent:info <имя>
@@ -77,13 +81,21 @@ yarn cli agent:edit <имя> [--port <порт>] [--host <хост>] [--remote-u
 # Примеры:
 yarn cli agent:edit worker-1 --port 5000
 yarn cli agent:edit worker-2 --host 127.0.0.1 --remote-url tls://localhost:7422
+
+# Запуск агента
+yarn cli agent:start <имя> [--debug] [--trace]
+
+# Примеры:
+yarn cli agent:start worker-1
+yarn cli agent:start worker-2 --debug
 ```
 
 **Возможности менеджмента агентов:**
 - **agent:list** - показывает все агенты с их статусом (сертификат, конфиг)
-- **agent:create** - создает новый агент с уникальным именем и параметрами
+- **agent:create** - создает новый агент с уникальным именем и параметрами. При существующем агенте запрашивает подтверждение замены (используйте --replace для автоматической замены)
 - **agent:info** - выводит детальную информацию: порт, хост, валидность сертификата, пути к файлам
 - **agent:edit** - обновляет конфигурацию агента без пересоздания сертификатов
+- **agent:start** - запускает агент с опциональным debug/trace логированием
 
 #### Очистка
 
@@ -114,21 +126,44 @@ yarn cli agent:create --help
 
 ### Запуск серверов
 
+**Рекомендуется использовать CLI (с поддержкой debug/trace логов):**
+
 #### Main сервер
 ```bash
+yarn cli server:start
+# или
+node dist/cli.js server:start
+
+# С debug логированием
+yarn cli server:start --debug
+
+# С trace логированием
+yarn cli server:start --trace
+```
+
+#### Агенты
+```bash
+yarn cli agent:start <имя>
+# или
+node dist/cli.js agent:start <имя>
+
+# Примеры:
+yarn cli agent:start agent
+yarn cli agent:start worker-1 --debug
+yarn cli agent:start worker-2 --trace
+```
+
+**Альтернативный способ (прямой запуск nats-server):**
+
+```bash
+# Main сервер
 nats-server -c config/main.conf
-```
 
-#### Default agent
-```bash
+# Default agent
 nats-server -c agents/agent/config/agent.conf
-```
 
-#### Custom agents
-```bash
+# Custom agents
 nats-server -c agents/<имя-агента>/config/<имя-агента>.conf
-# Например:
-nats-server -c agents/worker-1/config/worker-1.conf
 ```
 
 ## Архитектура
@@ -136,67 +171,132 @@ nats-server -c agents/worker-1/config/worker-1.conf
 ### Main Server
 - **Client port**: 4222 (TLS включен)
 - **Leaf node port**: 7422 (TLS включен)
+- **JetStream**: Включен с директорией `./jetstream`
 - Выступает в роли центрального NATS хаба
+- Поддерживает pub/sub messaging и streaming
 
 ### Agent (Leaf Node)
-- **Port**: 4223
-- Подключается к main серверу через TLS
+- **Default port**: 4223 (настраивается при создании)
+- **Default host**: 127.0.0.1 (настраивается при создании)
+- **JetStream**: Включен с отдельной директорией `./jetstream-agent` (или `agents/<name>/jetstream`)
+- Подключается к main серверу через TLS на порту 7422
 - Использует клиентский сертификат для аутентификации
+- Каждый агент имеет изолированную директорию с собственными:
+  - Сертификатами (в `agents/<name>/certs/`)
+  - Конфигурацией (в `agents/<name>/config/`)
+  - JetStream хранилищем (в `agents/<name>/jetstream/`)
 
 ### Цепочка сертификатов
-- Root CA подписывает сертификаты как сервера, так и leaf node
+- Root CA подписывает сертификаты как сервера, так и всех leaf nodes
 - Устанавливает взаимное доверие между компонентами
-- Все соединения требуют взаимной TLS верификации
+- Все соединения требуют взаимной TLS верификации (verify: true)
+- Leaf node аутентифицируется с помощью клиентского сертификата, подписанного Root CA
+
+### JetStream
+Оба типа серверов (main и agents) имеют JetStream для:
+- Персистентного хранения сообщений
+- Streaming и replay функциональности
+- At-least-once и exactly-once delivery гарантий
+- Хранилища создаются автоматически при первом запуске сервера
 
 ## Структура проекта
 
 ```
 .
 ├── src/
-│   ├── cli.ts                      # CLI entry point
-│   ├── features/
-│   │   ├── ca/
-│   │   │   └── generate-root-ca.ts        # Root CA generation
+│   ├── cli.ts                          # CLI entry point
+│   │
+│   ├── core/                           # Core domain logic
+│   │   ├── certificates/               # Certificate management
+│   │   │   ├── authority.ts            # CertificateAuthority class
+│   │   │   └── adapters/
+│   │   │       ├── openssl.ts          # OpenSSL adapter
+│   │   │       └── filesystem.ts       # Filesystem adapter
+│   │   ├── config/                     # NATS configuration
+│   │   │   ├── builder.ts              # NATSConfigBuilder class
+│   │   │   └── defaults.ts             # Default configuration constants
+│   │   ├── agent/                      # Agent registry and management
+│   │   │   ├── registry.ts             # AgentRegistry class
+│   │   │   └── paths.ts                # Agent path helpers
+│   │   ├── domain/                     # Domain models
+│   │   │   └── agent-name.ts           # AgentName value object
+│   │   ├── validation/                 # Validation logic
+│   │   │   ├── schemas.ts              # Zod schemas
+│   │   │   └── validators.ts           # Validation functions
+│   │   └── container.ts                # Dependency injection container
+│   │
+│   ├── commands/                       # CLI command implementations
 │   │   ├── server/
-│   │   │   ├── generate-certificate.ts    # Main server certificate
-│   │   │   └── generate-config.ts         # Main server configuration
+│   │   │   ├── generate-config.ts      # Server NATS configuration
+│   │   │   └── start.ts                # Start main server
 │   │   └── agent/
-│   │       ├── generate-certificate.ts    # Leaf node certificate (с поддержкой имен)
-│   │       ├── generate-config.ts         # Agent configuration (с кастомными параметрами)
-│   │       ├── list-agents.ts             # Список агентов
-│   │       ├── create-agent.ts            # Создание агента
-│   │       ├── get-agent-info.ts          # Информация об агенте
-│   │       └── edit-agent.ts              # Редактирование конфигурации
-│   └── utils/
-│       ├── fs.ts                   # File system utilities
-│       └── paths.ts                # Path constants
-├── certs/                          # Сгенерированные сертификаты (gitignored)
-│   ├── rootCA.key/crt              # Root Certificate Authority
-│   └── main.key/crt                # Сертификат main сервера
-├── config/                         # Сгенерированные конфигурации NATS (gitignored)
-│   └── main.conf                   # Конфигурация main сервера
-├── agents/                         # Директории агентов (gitignored)
-│   └── <имя-агента>/               # Индивидуальная директория агента
-│       ├── certs/                  # Сертификаты агента
-│       │   ├── <имя-агента>.key    # Приватный ключ
-│       │   └── <имя-агента>.crt    # Сертификат
-│       ├── config/                 # Конфигурация агента
-│       │   └── <имя-агента>.conf   # NATS конфигурация
-│       └── jetstream/              # JetStream данные (создается при запуске)
-├── jetstream/                      # JetStream данные main сервера (gitignored)
+│   │       ├── create.ts               # Create new agent
+│   │       ├── edit.ts                 # Edit agent configuration
+│   │       ├── generate-config.ts      # Agent NATS configuration
+│   │       ├── info.ts                 # Get agent details
+│   │       ├── list.ts                 # List all agents
+│   │       └── start.ts                # Start agent
+│   │
+│   ├── shared/                         # Shared utilities
+│   │   ├── fs.ts                       # File system helpers
+│   │   ├── logger.ts                   # Logging utilities
+│   │   └── paths.ts                    # Global path constants
+│   │
+│   └── types/                          # Global type definitions
+│       └── nats-config.ts              # NATS configuration interfaces
+│
+├── tests/                              # Test files
+│   ├── core/
+│   │   ├── certificates/
+│   │   ├── config/
+│   │   └── agent/
+│   └── shared/
+│
+├── certs/                              # Generated TLS certificates (gitignored)
+│   ├── rootCA.key/crt                  # Root Certificate Authority
+│   └── main.key/crt                    # Main server certificate
+│
+├── config/                             # Generated NATS configurations (gitignored)
+│   └── main.conf                       # Main server config with absolute cert paths
+│
+├── agents/                             # Agent directories (gitignored)
+│   └── <agent-name>/                   # Individual agent directory
+│       ├── certs/                      # Agent certificates
+│       │   ├── <agent-name>.key        # Agent private key
+│       │   └── <agent-name>.crt        # Agent certificate
+│       ├── config/                     # Agent configuration
+│       │   └── <agent-name>.conf       # Agent NATS config
+│       └── jetstream/                  # Agent JetStream data (created at runtime)
+│
+├── jetstream/                          # JetStream data for main server (gitignored)
 └── package.json
 ```
 
 ### Архитектура кода
 
-Проект организован по фичам:
-- **ca/** - Генерация Root Certificate Authority
-- **server/** - Сертификат и конфигурация main сервера
-- **agent/** - Сертификаты, конфигурации и менеджмент leaf nodes
+Проект следует принципам **Clean Architecture** и **SOLID**:
 
-Утилиты в `src/utils/`:
+#### Core Domain (`src/core/`)
+- **certificates/** - Certificate Authority и адаптеры (OpenSSL, filesystem)
+- **config/** - NATS configuration builder и defaults
+- **agent/** - Agent registry и управление путями
+- **domain/** - Доменные модели (AgentName value object)
+- **validation/** - Zod схемы и валидаторы
+- **container.ts** - Dependency injection container
+
+#### Commands (`src/commands/`)
+Тонкие обертки над core модулями:
+- Парсинг CLI аргументов
+- Вызов core модулей
+- Вывод результатов пользователю
+
+#### Shared (`src/shared/`)
 - **fs.ts** - Управление директориями (создание, удаление)
 - **paths.ts** - Централизованные константы путей
+- **logger.ts** - Утилиты для логирования
+
+#### Types (`src/types/`)
+- Глобальные интерфейсы для NATS конфигурации
 
 ### Структура директории агента
 
@@ -215,15 +315,49 @@ nats-server -c agents/worker-1/config/worker-1.conf
 - Серверные сертификаты валидны 825 дней
 - Root CA валиден 10 лет
 
-## Детали сертификатов
+## Разработка и тестирование
 
-Все сертификаты используют:
-- 4096-битные RSA ключи
-- SHA-256 алгоритм подписи
-- SAN (Subject Alternative Name) с localhost, 127.0.0.1 и hostname
-- Extended key usage для server и client аутентификации
-- Серверные сертификаты валидны 825 дней
-- Root CA валиден 10 лет
+### Скрипты разработки
+
+```bash
+# Сборка проекта
+yarn build
+
+# Сборка с очисткой
+yarn build:clean
+
+# Запуск CLI в режиме разработки (без сборки)
+yarn cli <command>
+
+# Линтинг
+yarn lint
+yarn lint:fix
+
+# Форматирование кода
+yarn format
+yarn format:check
+```
+
+### Тестирование
+
+```bash
+# Запуск тестов
+yarn test
+
+# Запуск тестов один раз (без watch режима)
+yarn test:run
+
+# UI для тестов
+yarn test:ui
+
+# Покрытие кода тестами
+yarn test:coverage
+```
+
+Проект использует:
+- **Vitest** для unit-тестирования
+- **Zod** для валидации данных
+- **TypeScript** для типобезопасности
 
 ## Используемые технологии
 
@@ -318,3 +452,99 @@ extendedKeyUsage = serverAuth,clientAuth
 - Leaf Node аутентифицируется с помощью клиентского сертификата
 - Root CA валидирует все сертификаты
 - Взаимная TLS верификация для всех подключений
+
+## Примеры использования
+
+### Типичный сценарий: создание инфраструктуры с несколькими агентами
+
+```bash
+# 1. Инициализация проекта (Root CA + main server + default agent)
+yarn cli init
+
+# 2. Создание дополнительных агентов для разных окружений
+yarn cli agent:create dev-worker --port 4224
+yarn cli agent:create staging-worker --port 4225
+yarn cli agent:create prod-worker --port 4226 --host 0.0.0.0
+
+# 3. Просмотр всех агентов
+yarn cli agent:list
+
+# 4. Запуск main сервера
+yarn cli server:start --debug
+
+# 5. В отдельных терминалах - запуск агентов
+yarn cli agent:start dev-worker --debug
+yarn cli agent:start staging-worker
+yarn cli agent:start prod-worker
+```
+
+### Изменение конфигурации существующего агента
+
+```bash
+# Изменить порт без пересоздания сертификата
+yarn cli agent:edit worker-1 --port 5000
+
+# Изменить хост и remote URL
+yarn cli agent:edit worker-1 --host 0.0.0.0 --remote-url tls://production-server:7422
+
+# Проверить обновленную конфигурацию
+yarn cli agent:info worker-1
+```
+
+### Замена агента (пересоздание сертификата и конфига)
+
+```bash
+# С подтверждением
+yarn cli agent:create worker-1 --port 4230
+
+# Без подтверждения (автоматическая замена)
+yarn cli agent:create worker-1 --port 4230 --replace
+```
+
+## FAQ
+
+**Q: Что делать, если команда `agent:init` завершается с ошибкой?**  
+A: Убедитесь, что вы сначала выполнили `server:init` или `init`. Root CA должен существовать до создания агентов.
+
+**Q: Можно ли изменить порт агента после создания?**  
+A: Да, используйте `yarn cli agent:edit <name> --port <новый-порт>`. Это обновит только конфигурацию без пересоздания сертификата.
+
+**Q: Как удалить агента?**  
+A: Удалите директорию агента вручную: `rm -rf agents/<имя-агента>`, или выполните `yarn cli clean` для удаления всех сгенерированных файлов.
+
+**Q: Сколько агентов можно создать?**  
+A: Неограниченное количество, но каждый должен иметь уникальный порт и имя.
+
+**Q: Где хранятся данные JetStream?**  
+A: Для main сервера - в `./jetstream`, для каждого агента - в `agents/<имя>/jetstream/`. Эти директории создаются автоматически при первом запуске.
+
+**Q: Нужно ли пересоздавать сертификаты при изменении конфигурации?**  
+A: Нет, команда `agent:edit` обновляет только конфигурацию. Сертификаты пересоздаются только при `agent:create`.
+
+**Q: Как проверить валидность сертификата агента?**  
+A: Используйте `yarn cli agent:info <имя>` - команда покажет период валидности сертификата и предупредит, если он истек.
+
+**Q: Можно ли использовать агенты на разных машинах?**  
+A: Да, скопируйте директорию агента (`agents/<имя>/`) на целевую машину и обновите `remote-url` через `agent:edit`, указав внешний IP/hostname main сервера.
+
+## Troubleshooting
+
+### Ошибка "EADDRINUSE" при запуске сервера
+Порт уже занят другим процессом. Используйте `agent:edit` для изменения порта или завершите процесс, занимающий порт:
+```bash
+# Найти процесс на порту
+lsof -i :4223
+
+# Завершить процесс
+kill -9 <PID>
+```
+
+### TLS handshake errors
+- Проверьте, что Root CA и сертификаты не истекли
+- Убедитесь, что пути к сертификатам в конфиге корректны (абсолютные пути)
+- Проверьте права доступа к файлам сертификатов
+
+### Агент не может подключиться к main серверу
+- Убедитесь, что main сервер запущен на порту 7422
+- Проверьте `remote-url` в конфиге агента
+- Если main сервер на другой машине, убедитесь, что порт 7422 открыт в firewall
