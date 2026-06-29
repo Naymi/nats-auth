@@ -1,7 +1,5 @@
-import { readdir, stat } from 'node:fs/promises';
-import path from 'node:path';
-
-import { AGENTS_DIR } from '../../utils/paths.js';
+import { NodeFileSystem } from './adapters/filesystem.js';
+import { AgentRegistry, AgentSummary } from './registry.js';
 
 export interface AgentInfo {
   name: string;
@@ -13,39 +11,15 @@ export interface AgentInfo {
 }
 
 export async function listAgents(): Promise<AgentInfo[]> {
-  const agents: AgentInfo[] = [];
+  const registry = new AgentRegistry(new NodeFileSystem());
+  const agents = await registry.list();
 
-  try {
-    const agentDirs = await readdir(AGENTS_DIR);
-
-    for (const name of agentDirs) {
-      const agentDir = path.join(AGENTS_DIR, name);
-      const agentStat = await stat(agentDir).catch(() => null);
-
-      if (!agentStat || !agentStat.isDirectory()) {
-        continue;
-      }
-
-      const certPath = path.join(agentDir, 'certs', `${name}.crt`);
-      const keyPath = path.join(agentDir, 'certs', `${name}.key`);
-      const configPath = path.join(agentDir, 'config', `${name}.conf`);
-
-      const certStat = await stat(certPath).catch(() => null);
-      const keyStat = await stat(keyPath).catch(() => null);
-      const configStat = await stat(configPath).catch(() => null);
-
-      agents.push({
-        name,
-        hasCertificate: !!(certStat && keyStat),
-        hasConfig: !!configStat,
-        certPath: certStat ? certPath : undefined,
-        configPath: configStat ? configPath : undefined,
-        agentDir,
-      });
-    }
-  } catch {
-    // AGENTS_DIR doesn't exist or is empty
-  }
-
-  return agents.sort((a, b) => a.name.localeCompare(b.name));
+  return agents.map((agent: AgentSummary): AgentInfo => ({
+    name: agent.name,
+    hasCertificate: agent.hasCertificate,
+    hasConfig: agent.hasConfig,
+    certPath: agent.certPath,
+    configPath: agent.configPath,
+    agentDir: agent.agentDir,
+  }));
 }
