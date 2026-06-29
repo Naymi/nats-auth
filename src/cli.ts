@@ -7,6 +7,7 @@ import { createAgent } from './features/agent/create-agent.js';
 import { editAgentConfig } from './features/agent/edit-agent.js';
 import { getAgentInfo } from './features/agent/get-agent-info.js';
 import { listAgents } from './features/agent/list-agents.js';
+import { startAgent } from './features/agent/start-agent.js';
 import { NodeFileSystem } from './features/agent/adapters/filesystem.js';
 import { AgentRegistry } from './features/agent/registry.js';
 import { CertificateAuthority } from './features/certificate-authority/certificate-authority.js';
@@ -280,6 +281,23 @@ program
 
     try {
       await editAgentConfig(editOptions);
+    } catch (error) {
+      handleError(error);
+    }
+  });
+
+program
+  .command('agent:start <name>')
+  .description('Start an agent')
+  .option('-D, --debug', 'Enable debug logging', false)
+  .option('-V, --trace', 'Enable trace logging', false)
+  .action(async (name: string, options) => {
+    try {
+      await startAgent({
+        name,
+        debug: options.debug,
+        trace: options.trace,
+      });
     } catch (error) {
       handleError(error);
     }

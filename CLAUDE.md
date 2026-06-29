@@ -71,6 +71,14 @@ yarn cli agent:info <name>
 yarn cli agent:edit <name> [--port <port>] [--host <host>] [--remote-url <url>]
 # Example:
 yarn cli agent:edit worker-1 --port 5000
+
+# Start an agent
+yarn cli agent:start <name> [--debug] [--trace]
+# or
+node dist/cli.js agent:start <name>
+# Example:
+yarn cli agent:start agent
+yarn cli agent:start worker-1 --debug
 ```
 
 **Agent Management Features:**
@@ -78,6 +86,7 @@ yarn cli agent:edit worker-1 --port 5000
 - **agent:create** - Generates certificate and config for a new agent in isolated directory. If agent exists, prompts for confirmation to replace (use --replace to skip prompt)
 - **agent:info** - Displays detailed information including certificate validity, port, host, and paths
 - **agent:edit** - Updates agent configuration (port, host, remote URL) without regenerating certificates
+- **agent:start** - Starts an agent using nats-server with optional debug/trace logging
 
 ### Cleanup
 ```bash
@@ -89,6 +98,22 @@ node dist/cli.js clean
 This removes `certs/`, `config/`, and `agents/` directories.
 
 ### Running Servers
+
+**Using CLI (recommended):**
+```bash
+# Start an agent using CLI
+yarn cli agent:start <name>
+# or
+node dist/cli.js agent:start <name>
+
+# With debug logging
+yarn cli agent:start <name> --debug
+
+# With trace logging
+yarn cli agent:start <name> --trace
+```
+
+**Using nats-server directly:**
 ```bash
 # Main server
 nats-server -c config/main.conf
@@ -117,6 +142,8 @@ src/
       list-agents.ts           # List all agents with their status
       create-agent.ts          # Create new agent with certificate and config
       get-agent-info.ts        # Get detailed agent information
+      edit-agent.ts            # Edit agent configuration
+      start-agent.ts           # Start agent using nats-server
       edit-agent.ts            # Edit agent configuration
   utils/
     fs.ts                   # File system utilities (ensureDir, removeDir)
@@ -151,6 +178,7 @@ The CLI tool (`src/cli.ts`) uses Commander.js and orchestrates feature modules:
 - **agent:create** - Create new agent with custom name and options in separate directory
 - **agent:info** - Show detailed agent information
 - **agent:edit** - Edit agent configuration
+- **agent:start** - Start an agent using nats-server
 
 Each feature is isolated in its own directory under `src/features/`:
 - **ca/** - Root Certificate Authority generation
