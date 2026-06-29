@@ -1,7 +1,9 @@
-import { readFile, writeFile } from 'fs/promises';
-import { join } from 'path';
+import { readFile, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+
 import { AGENTS_DIR } from '../../utils/paths.js';
 import { EditAgentOptionsSchema } from '../../utils/validation.js';
+
 import { checkPortConflict } from './validation.js';
 
 export interface EditAgentOptions {
@@ -16,16 +18,17 @@ export async function editAgentConfig(options: EditAgentOptions): Promise<void> 
   const validated = EditAgentOptionsSchema.parse(options);
   const { name, port, host, remoteUrl } = validated;
 
-  const configPath = join(AGENTS_DIR, name, 'config', `${name}.conf`);
+  const configPath = path.join(AGENTS_DIR, name, 'config', `${name}.conf`);
 
   console.log(`✏️  Editing configuration for agent: ${name}...`);
 
   let configContent: string;
+
   try {
-    configContent = await readFile(configPath, 'utf-8');
+    configContent = await readFile(configPath, 'utf8');
   } catch {
     console.error(`❌ Error: Configuration for agent '${name}' not found.`);
-    process.exit(1);
+    throw new Error(`Configuration for agent '${name}' not found.`);
   }
 
   // Check for port conflicts if port is being changed
@@ -36,11 +39,9 @@ export async function editAgentConfig(options: EditAgentOptions): Promise<void> 
   }
 
   if (host !== undefined) {
-    if (configContent.match(/^host:/m)) {
-      configContent = configContent.replace(/^host:\s*.+/m, `host: ${host}`);
-    } else {
-      configContent = configContent.replace(/^port:(.+)/m, `port:$1\nhost: ${host}`);
-    }
+    configContent = /^host:/m.test(configContent)
+      ? configContent.replace(/^host:\s*.+/m, `host: ${host}`)
+      : configContent.replace(/^port:(.+)/m, `port:$1\nhost: ${host}`);
     console.log(`   Updated host: ${host}`);
   }
 

@@ -1,7 +1,8 @@
-import { readFile } from 'fs/promises';
-import { join } from 'path';
+import { execSync } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+
 import { AGENTS_DIR } from '../../utils/paths.js';
-import { execSync } from 'child_process';
 
 export interface AgentDetails {
   name: string;
@@ -28,10 +29,10 @@ export async function getAgentInfo(name: string): Promise<AgentDetails> {
     hasConfig: false,
   };
 
-  const agentDir = join(AGENTS_DIR, name);
-  const certPath = join(agentDir, 'certs', `${name}.crt`);
-  const keyPath = join(agentDir, 'certs', `${name}.key`);
-  const configPath = join(agentDir, 'config', `${name}.conf`);
+  const agentDir = path.join(AGENTS_DIR, name);
+  const certPath = path.join(agentDir, 'certs', `${name}.crt`);
+  const keyPath = path.join(agentDir, 'certs', `${name}.key`);
+  const configPath = path.join(agentDir, 'config', `${name}.conf`);
 
   details.agentDir = agentDir;
 
@@ -42,7 +43,7 @@ export async function getAgentInfo(name: string): Promise<AgentDetails> {
     details.certPath = certPath;
 
     try {
-      const certText = execSync(`openssl x509 -in ${certPath} -noout -text`, { encoding: 'utf-8' });
+      const certText = execSync(`openssl x509 -in ${certPath} -noout -text`, { encoding: 'utf8' });
       const subjectMatch = certText.match(/Subject: (.+)/);
       const issuerMatch = certText.match(/Issuer: (.+)/);
       const validFromMatch = certText.match(/Not Before: (.+)/);
@@ -62,7 +63,8 @@ export async function getAgentInfo(name: string): Promise<AgentDetails> {
   }
 
   try {
-    const configContent = await readFile(configPath, 'utf-8');
+    const configContent = await readFile(configPath, 'utf8');
+
     details.hasConfig = true;
     details.configPath = configPath;
 
@@ -70,7 +72,7 @@ export async function getAgentInfo(name: string): Promise<AgentDetails> {
     const hostMatch = configContent.match(/^host:\s*(.+)/m);
     const storeDirMatch = configContent.match(/store_dir:\s*"([^"]+)"/);
 
-    if (portMatch) details.port = parseInt(portMatch[1], 10);
+    if (portMatch) details.port = Number.parseInt(portMatch[1], 10);
     if (hostMatch) details.host = hostMatch[1].trim();
     if (storeDirMatch) details.storeDir = storeDirMatch[1];
   } catch {

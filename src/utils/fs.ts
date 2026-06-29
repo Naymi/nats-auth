@@ -1,5 +1,5 @@
-import { access, mkdir, rm } from 'fs/promises';
-import { constants } from 'fs';
+import { constants } from 'node:fs';
+import { access, mkdir, rm } from 'node:fs/promises';
 
 export async function ensureDir(dir: string): Promise<void> {
   try {

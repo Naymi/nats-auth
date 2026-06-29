@@ -1,14 +1,16 @@
-import { generateAgentCertificate } from './generate-certificate.js';
-import { generateAgentConfig } from './generate-config.js';
+import { constants } from 'node:fs';
+import { access } from 'node:fs/promises';
+import path from 'node:path';
+
 import { ensureDir } from '../../utils/fs.js';
 import { CERTS_DIR } from '../../utils/paths.js';
-import { getAgentDir, getAgentCertsDir, getAgentConfigDir } from './paths.js';
 import { CreateAgentOptionsSchema } from '../../utils/validation.js';
-import { checkPortConflict } from './validation.js';
+
+import { generateAgentCertificate } from './generate-certificate.js';
+import { generateAgentConfig } from './generate-config.js';
+import { getAgentCertsDir, getAgentConfigDir, getAgentDir } from './paths.js';
 import { AgentTransaction } from './transaction.js';
-import { access } from 'fs/promises';
-import { constants } from 'fs';
-import { join } from 'path';
+import { checkPortConflict } from './validation.js';
 
 export interface CreateAgentOptions {
   name: string;
@@ -28,7 +30,7 @@ export async function createAgent(options: CreateAgentOptions): Promise<void> {
     console.error(
       '❌ Error: Root CA not found. Generate it first with "gen:main" or "setup" command.'
     );
-    process.exit(1);
+    throw new Error('Root CA not found. Generate it first with "gen:main" or "setup" command.');
   }
 
   // Check for port conflicts with existing agents
@@ -40,9 +42,9 @@ export async function createAgent(options: CreateAgentOptions): Promise<void> {
   try {
     // Begin transaction - create temporary directory
     const tempDir = await transaction.begin(agentDir);
-    const tempCertsDir = join(tempDir, 'certs');
-    const tempConfigDir = join(tempDir, 'config');
-    const tempJetStreamDir = join(tempDir, 'jetstream');
+    const tempCertsDir = path.join(tempDir, 'certs');
+    const tempConfigDir = path.join(tempDir, 'config');
+    const tempJetStreamDir = path.join(tempDir, 'jetstream');
 
     await ensureDir(tempCertsDir);
     await ensureDir(tempConfigDir);

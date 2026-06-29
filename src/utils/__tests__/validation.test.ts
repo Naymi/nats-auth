@@ -1,9 +1,10 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import {
   AgentNameSchema,
-  PortSchema,
-  HostSchema,
   CreateAgentOptionsSchema,
+  HostSchema,
+  PortSchema,
 } from '../validation.js';
 
 describe('AgentNameSchema', () => {
@@ -20,6 +21,7 @@ describe('AgentNameSchema', () => {
 
   it('should reject names that are too long', () => {
     const longName = 'a'.repeat(64);
+
     expect(() => AgentNameSchema.parse(longName)).toThrow('Agent name too long');
   });
 

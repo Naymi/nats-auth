@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import { execSync } from 'node:child_process';
 
 /**
  * Execute OpenSSL command with error handling
@@ -12,7 +12,8 @@ export function executeOpenSSL(command: string, operation: string): void {
   } catch (error) {
     console.error(`❌ OpenSSL error during ${operation}:`);
     if (error instanceof Error) {
-      const stderr = (error as any).stderr?.toString() || error.message;
+      const stderr = (error as Error & { stderr?: Buffer }).stderr?.toString() || error.message;
+
       console.error(stderr);
     }
     throw new Error(`Failed to ${operation}`);
@@ -34,6 +35,6 @@ export function checkOpenSSLAvailable(): void {
     console.error('  macOS: brew install openssl');
     console.error('  Ubuntu/Debian: sudo apt-get install openssl');
     console.error('  Windows: https://slproweb.com/products/Win32OpenSSL.html');
-    process.exit(1);
+    throw new Error('OpenSSL is not installed. Please install it first.');
   }
 }

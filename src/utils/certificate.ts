@@ -1,6 +1,7 @@
-import { writeFile, rm } from 'fs/promises';
-import { join } from 'path';
-import { hostname } from 'os';
+import { rm, writeFile } from 'node:fs/promises';
+import { hostname } from 'node:os';
+import path from 'node:path';
+
 import { executeOpenSSL } from './openssl.js';
 
 export interface CertificateOptions {
@@ -40,10 +41,10 @@ export async function generateCertificateFromCA(options: CertificateOptions): Pr
     },
   } = options;
 
-  const keyPath = join(certsDir, `${name}.key`);
-  const csrPath = join(certsDir, `${name}.csr`);
-  const certPath = join(certsDir, `${name}.crt`);
-  const extFilePath = join(certsDir, `${name}.ext`);
+  const keyPath = path.join(certsDir, `${name}.key`);
+  const csrPath = path.join(certsDir, `${name}.csr`);
+  const certPath = path.join(certsDir, `${name}.crt`);
+  const extFilePath = path.join(certsDir, `${name}.ext`);
 
   try {
     // Generate SAN extension file
@@ -68,6 +69,7 @@ IP.1 = 127.0.0.1
 
     // Generate CSR
     const subjectString = `/C=${subject.country}/ST=${subject.state}/L=${subject.locality}/O=${subject.organization}/CN=${commonName}`;
+
     executeOpenSSL(
       `openssl req -new -key ${keyPath} -out ${csrPath} -subj "${subjectString}"`,
       `generate CSR for ${name}`

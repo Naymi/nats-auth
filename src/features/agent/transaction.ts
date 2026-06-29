@@ -1,4 +1,5 @@
-import { rm, rename } from 'fs/promises';
+import { rename, rm } from 'node:fs/promises';
+
 import { ensureDir } from '../../utils/fs.js';
 
 /**

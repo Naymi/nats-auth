@@ -1,8 +1,5 @@
+import { createConnection } from 'node:net';
 import { z } from 'zod';
-import { readdir } from 'fs/promises';
-import { join } from 'path';
-import { AGENTS_DIR } from './paths.js';
-import { createConnection } from 'net';
 
 /**
  * Validate agent name (only letters, numbers, hyphens, and underscores)
@@ -36,6 +33,7 @@ export const HostSchema = z
       // Check IPv4 address or hostname
       const ipv4Pattern = /^(\d{1,3}\.){3}\d{1,3}$/;
       const hostnamePattern = /^[a-zA-Z0-9.-]+$/;
+
       return ipv4Pattern.test(host) || hostnamePattern.test(host);
     },
     { message: 'Invalid host format (must be IPv4 address or hostname)' }
@@ -57,7 +55,7 @@ export const EditAgentOptionsSchema = z.object({
   name: AgentNameSchema,
   port: PortSchema.optional(),
   host: HostSchema.optional(),
-  remoteUrl: z.string().url('Invalid remote URL').optional(),
+  remoteUrl: z.url().optional(),
 });
 
 /**
@@ -88,4 +86,3 @@ export async function isPortInUse(port: number): Promise<boolean> {
  * @param port - Port number to check
  * @param excludeAgent - Agent name to exclude from check (for editing)
  */
-

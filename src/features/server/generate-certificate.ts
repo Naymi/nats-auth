@@ -1,12 +1,13 @@
-import { join } from 'path';
-import { generateCertificateFromCA } from '../../utils/certificate.js';
+import path from 'node:path';
+
 import { DEFAULT_CONFIG } from '../../config/defaults.js';
+import { generateCertificateFromCA } from '../../utils/certificate.js';
 
 export async function generateServerCertificate(certsDir: string): Promise<void> {
   console.log('🔐 Generating Main Server certificate...');
 
-  const rootKeyPath = join(certsDir, 'rootCA.key');
-  const rootCertPath = join(certsDir, 'rootCA.crt');
+  const rootKeyPath = path.join(certsDir, 'rootCA.key');
+  const rootCertPath = path.join(certsDir, 'rootCA.crt');
 
   const { certificate } = DEFAULT_CONFIG;
 

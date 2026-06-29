@@ -1,5 +1,6 @@
-import { readdir } from 'fs/promises';
-import { join } from 'path';
+import { readdir } from 'node:fs/promises';
+import path from 'node:path';
+
 import { AGENTS_DIR } from '../../utils/paths.js';
 
 /**
@@ -17,15 +18,15 @@ export async function checkPortConflict(port: number, excludeAgent?: string): Pr
         continue;
       }
 
-      const configPath = join(AGENTS_DIR, agentName, 'config', `${agentName}.conf`);
+      const configPath = path.join(AGENTS_DIR, agentName, 'config', `${agentName}.conf`);
 
       try {
-        const fs = await import('fs/promises');
-        const configContent = await fs.readFile(configPath, 'utf-8');
+        const fs = await import('node:fs/promises');
+        const configContent = await fs.readFile(configPath, 'utf8');
         const portMatch = configContent.match(/^port:\s*(\d+)/m);
 
         if (portMatch) {
-          const existingPort = parseInt(portMatch[1], 10);
+          const existingPort = Number.parseInt(portMatch[1], 10);
           if (existingPort === port) {
             throw new Error(
               `Port ${port} is already used by agent '${agentName}'. Please choose a different port.`
@@ -34,14 +35,14 @@ export async function checkPortConflict(port: number, excludeAgent?: string): Pr
         }
       } catch (error) {
         // Config doesn't exist or can't be read, skip this agent
-        if ((error as any).code !== 'ENOENT') {
+        if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
           throw error;
         }
       }
     }
   } catch (error) {
     // AGENTS_DIR doesn't exist yet, no conflicts
-    if ((error as any).code !== 'ENOENT') {
+    if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
       throw error;
     }
   }

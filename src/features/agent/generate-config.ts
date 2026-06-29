@@ -1,5 +1,6 @@
-import { writeFile } from 'fs/promises';
-import { join } from 'path';
+import { writeFile } from 'node:fs/promises';
+import path from 'node:path';
+
 import { DEFAULT_CONFIG } from '../../config/defaults.js';
 
 export async function generateAgentConfig(
@@ -13,9 +14,9 @@ export async function generateAgentConfig(
 ): Promise<void> {
   console.log(`📝 Generating configuration for agent: ${name}...`);
 
-  const leafKeyPath = join(agentCertsDir, `${name}.key`);
-  const leafCertPath = join(agentCertsDir, `${name}.crt`);
-  const rootCertPath = join(rootCertsDir, 'rootCA.crt');
+  const leafKeyPath = path.join(agentCertsDir, `${name}.key`);
+  const leafCertPath = path.join(agentCertsDir, `${name}.crt`);
+  const rootCertPath = path.join(rootCertsDir, 'rootCA.crt');
 
   const { agent } = DEFAULT_CONFIG;
 
@@ -52,7 +53,8 @@ trace: ${agent.logging.trace}
 logtime: ${agent.logging.logtime}
 `;
 
-  const configPath = join(agentConfigDir, `${name}.conf`);
+  const configPath = path.join(agentConfigDir, `${name}.conf`);
+
   await writeFile(configPath, config);
 
   console.log(`✅ Configuration for '${name}' saved to: ${configPath}`);

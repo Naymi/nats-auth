@@ -1,12 +1,13 @@
-import { join } from 'path';
-import { executeOpenSSL } from '../../utils/openssl.js';
+import path from 'node:path';
+
 import { DEFAULT_CONFIG } from '../../config/defaults.js';
+import { executeOpenSSL } from '../../utils/openssl.js';
 
 export function generateRootCA(certsDir: string): void {
   console.log('🔐 Generating Root CA...');
 
-  const rootKeyPath = join(certsDir, 'rootCA.key');
-  const rootCertPath = join(certsDir, 'rootCA.crt');
+  const rootKeyPath = path.join(certsDir, 'rootCA.key');
+  const rootCertPath = path.join(certsDir, 'rootCA.crt');
 
   const { rootCA, subject } = DEFAULT_CONFIG.certificate;
 

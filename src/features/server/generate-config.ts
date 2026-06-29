@@ -1,18 +1,19 @@
-import { writeFile } from 'fs/promises';
-import { join, resolve } from 'path';
+import { writeFile } from 'node:fs/promises';
+import path from 'node:path';
+
 import { DEFAULT_CONFIG } from '../../config/defaults.js';
 
 export async function generateServerConfig(certsDir: string, configDir: string): Promise<void> {
   console.log('📝 Generating Main Server configuration...');
 
-  const mainKeyPath = join(certsDir, 'main.key');
-  const mainCertPath = join(certsDir, 'main.crt');
-  const rootCertPath = join(certsDir, 'rootCA.crt');
+  const mainKeyPath = path.join(certsDir, 'main.key');
+  const mainCertPath = path.join(certsDir, 'main.crt');
+  const rootCertPath = path.join(certsDir, 'rootCA.crt');
 
   const { server } = DEFAULT_CONFIG;
 
   // Use absolute path for JetStream store
-  const jetStreamStoreDir = resolve(server.jetstream.storeDir);
+  const jetStreamStoreDir = path.resolve(server.jetstream.storeDir);
 
   const config = `
 # Main NATS Server Configuration
@@ -43,7 +44,8 @@ trace: ${server.logging.trace}
 logtime: ${server.logging.logtime}
 `;
 
-  const configPath = join(configDir, 'main.conf');
+  const configPath = path.join(configDir, 'main.conf');
+
   await writeFile(configPath, config);
 
   console.log('✅ Main Server configuration saved to:', configPath);

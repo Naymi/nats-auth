@@ -1,5 +1,6 @@
-import { readdir, stat } from 'fs/promises';
-import { join } from 'path';
+import { readdir, stat } from 'node:fs/promises';
+import path from 'node:path';
+
 import { AGENTS_DIR } from '../../utils/paths.js';
 
 export interface AgentInfo {
@@ -18,16 +19,16 @@ export async function listAgents(): Promise<AgentInfo[]> {
     const agentDirs = await readdir(AGENTS_DIR);
 
     for (const name of agentDirs) {
-      const agentDir = join(AGENTS_DIR, name);
+      const agentDir = path.join(AGENTS_DIR, name);
       const agentStat = await stat(agentDir).catch(() => null);
 
       if (!agentStat || !agentStat.isDirectory()) {
         continue;
       }
 
-      const certPath = join(agentDir, 'certs', `${name}.crt`);
-      const keyPath = join(agentDir, 'certs', `${name}.key`);
-      const configPath = join(agentDir, 'config', `${name}.conf`);
+      const certPath = path.join(agentDir, 'certs', `${name}.crt`);
+      const keyPath = path.join(agentDir, 'certs', `${name}.key`);
+      const configPath = path.join(agentDir, 'config', `${name}.conf`);
 
       const certStat = await stat(certPath).catch(() => null);
       const keyStat = await stat(keyPath).catch(() => null);

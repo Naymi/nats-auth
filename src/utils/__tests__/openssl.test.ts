@@ -1,5 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
-import { executeOpenSSL, checkOpenSSLAvailable } from '../openssl.js';
+import { describe, expect, it, vi } from 'vitest';
+
+import { checkOpenSSLAvailable, executeOpenSSL } from '../openssl.js';
 
 // Mock child_process
 vi.mock('child_process', () => ({
@@ -9,7 +10,8 @@ vi.mock('child_process', () => ({
 describe('openssl utilities', () => {
   describe('executeOpenSSL', () => {
     it('should execute command successfully', async () => {
-      const { execSync } = await import('child_process');
+      const { execSync } = await import('node:child_process');
+
       vi.mocked(execSync).mockReturnValue(Buffer.from('success'));
 
       expect(() => executeOpenSSL('openssl version', 'test operation')).not.toThrow();
@@ -17,9 +19,10 @@ describe('openssl utilities', () => {
     });
 
     it('should throw with descriptive error message on failure', async () => {
-      const { execSync } = await import('child_process');
-      const mockError = new Error('Command failed');
-      (mockError as any).stderr = Buffer.from('OpenSSL error details');
+      const { execSync } = await import('node:child_process');
+      const mockError = new Error('Command failed') as Error & { stderr: Buffer };
+
+      mockError.stderr = Buffer.from('OpenSSL error details');
       vi.mocked(execSync).mockImplementation(() => {
         throw mockError;
       });
@@ -32,28 +35,26 @@ describe('openssl utilities', () => {
 
   describe('checkOpenSSLAvailable', () => {
     it('should not throw if OpenSSL is available', async () => {
-      const { execSync } = await import('child_process');
+      const { execSync } = await import('node:child_process');
+
       vi.mocked(execSync).mockReturnValue(Buffer.from('OpenSSL 3.0.0'));
 
       expect(() => checkOpenSSLAvailable()).not.toThrow();
       expect(execSync).toHaveBeenCalledWith('openssl version', { stdio: 'pipe' });
     });
 
-    it('should exit process if OpenSSL is not available', async () => {
-      const { execSync } = await import('child_process');
+    it('should throw error if OpenSSL is not available', async () => {
+      const { execSync } = await import('node:child_process');
+
       vi.mocked(execSync).mockImplementation(() => {
         throw new Error('Command not found');
       });
 
-      const mockExit = vi.spyOn(process, 'exit').mockImplementation((() => {}) as any);
       const mockConsoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      checkOpenSSLAvailable();
-
+      expect(() => checkOpenSSLAvailable()).toThrow('OpenSSL is not installed');
       expect(mockConsoleError).toHaveBeenCalledWith('❌ OpenSSL not found in PATH');
-      expect(mockExit).toHaveBeenCalledWith(1);
 
-      mockExit.mockRestore();
       mockConsoleError.mockRestore();
     });
   });
