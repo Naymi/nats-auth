@@ -13,6 +13,7 @@ import { AgentRegistry } from './features/agent/registry.js';
 import { CertificateAuthority } from './features/certificate-authority/certificate-authority.js';
 import { NodeOpenSSL } from './features/certificate-authority/adapters/openssl.js';
 import { generateServerConfig } from './features/server/generate-config.js';
+import { startServer } from './features/server/start-server.js';
 import { ensureDir, removeDir } from './utils/fs.js';
 import { AGENTS_DIR, CERTS_DIR, CONFIG_DIR } from './utils/paths.js';
 
@@ -90,6 +91,22 @@ program
     await generateServerConfig(CERTS_DIR, CONFIG_DIR);
 
     console.log('\n✨ Main server setup complete!');
+  });
+
+program
+  .command('server:start')
+  .description('Start the main NATS server')
+  .option('-D, --debug', 'Enable debug logging', false)
+  .option('-V, --trace', 'Enable trace logging', false)
+  .action(async (options) => {
+    try {
+      await startServer({
+        debug: options.debug,
+        trace: options.trace,
+      });
+    } catch (error) {
+      handleError(error);
+    }
   });
 
 program

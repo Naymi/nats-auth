@@ -101,15 +101,22 @@ This removes `certs/`, `config/`, and `agents/` directories.
 
 **Using CLI (recommended):**
 ```bash
-# Start an agent using CLI
+# Start main server
+yarn cli server:start
+# or
+node dist/cli.js server:start
+
+# Start an agent
 yarn cli agent:start <name>
 # or
 node dist/cli.js agent:start <name>
 
 # With debug logging
+yarn cli server:start --debug
 yarn cli agent:start <name> --debug
 
 # With trace logging
+yarn cli server:start --trace
 yarn cli agent:start <name> --trace
 ```
 
@@ -136,6 +143,7 @@ src/
     server/
       generate-certificate.ts  # Main server certificate generation
       generate-config.ts       # Main server NATS configuration
+      start-server.ts          # Start main server using nats-server
     agent/
       generate-certificate.ts  # Leaf node certificate generation (supports custom names)
       generate-config.ts       # Agent NATS configuration (supports custom port/host)
@@ -172,6 +180,7 @@ scripts/                    # Legacy scripts (deprecated)
 The CLI tool (`src/cli.ts`) uses Commander.js and orchestrates feature modules:
 - **init** - Full setup (Root CA + main server + default agent)
 - **server:init** - Generate Root CA and main server components
+- **server:start** - Start the main NATS server
 - **agent:init** - Generate default agent in agents/agent/ directory
 - **clean** (alias: clear) - Remove all generated files (certs, config, agents)
 - **agent:list** - List all agents with status
