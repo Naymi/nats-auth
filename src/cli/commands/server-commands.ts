@@ -9,7 +9,9 @@ export function registerServerCommands(program: Command): void {
   program
     .command('server:init')
     .description('Generate Root CA, main server certificate and configuration')
-    .action(async () => {
+    .option('-n, --name <name>', 'Server name', 'main-server')
+    .option('-d, --domain <domain>', 'JetStream domain')
+    .action(async (options: { name?: string; domain?: string }) => {
       const container = Container.getInstance();
       const available = await container.openssl.checkAvailable();
       if (!available) {
@@ -25,7 +27,7 @@ export function registerServerCommands(program: Command): void {
 
       const rootCA = await container.certificateAuthority.issueRootCA({ certsDir: CERTS_DIR });
       await container.certificateAuthority.issueServerCert(rootCA, { certsDir: CERTS_DIR });
-      await generateServerConfig(CERTS_DIR, CONFIG_DIR);
+      await generateServerConfig(CERTS_DIR, CONFIG_DIR, options.name, options.domain);
 
       console.log('\n✨ Main server setup complete!');
     });

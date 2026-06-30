@@ -39,12 +39,26 @@ export const HostSchema = z
   );
 
 /**
+ * Validate JetStream domain name (alphanumeric, hyphens, underscores)
+ */
+export const DomainSchema = z
+  .string()
+  .min(1, 'Domain cannot be empty')
+  .max(63, 'Domain too long (max 63 characters)')
+  .regex(
+    /^[a-zA-Z0-9_-]+$/,
+    'Domain can only contain letters, numbers, hyphens, and underscores'
+  )
+  .optional();
+
+/**
  * Schema for creating an agent
  */
 export const CreateAgentOptionsSchema = z.object({
   name: AgentNameSchema,
   port: PortSchema.default(4223),
   host: HostSchema.default('127.0.0.1'),
+  domain: DomainSchema,
   replace: z.boolean().optional().default(false),
 });
 

@@ -11,7 +11,8 @@ export async function generateAgentConfig(
   agentJetStreamDir: string,
   name: string = 'agent',
   port: number = 4223,
-  host: string = '127.0.0.1'
+  host: string = '127.0.0.1',
+  domain?: string
 ): Promise<void> {
   console.log(`📝 Generating configuration for agent: ${name}...`);
 
@@ -25,10 +26,12 @@ export async function generateAgentConfig(
   const config = builder.leafNodeConfig({
     port,
     host,
+    serverName: name,
     jetstream: {
       storeDir: agentJetStreamDir,
       maxMemoryStore: agent.jetstream.maxMemoryStore,
       maxFileStore: agent.jetstream.maxFileStore,
+      domain: domain || agent.jetstream.domain,
     },
     remote: {
       url: agent.remoteUrl,

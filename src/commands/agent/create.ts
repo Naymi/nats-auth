@@ -5,6 +5,7 @@ export interface CreateAgentOptions {
   name: string;
   port?: number;
   host?: string;
+  domain?: string;
   replace?: boolean;
 }
 

@@ -19,10 +19,12 @@ The codebase follows industry best practices:
 
 ## Architecture
 
-- **Main Server**: Acts as the central NATS hub with TLS-enabled client connections (port 4222) and leaf node connections (port 7422). Includes JetStream for persistence and streaming.
-- **Agent (Leaf Node)**: Connects to the main server via TLS with client certificate authentication (port 4223). Has its own JetStream store.
+- **Main Server**: Acts as the central NATS hub with TLS-enabled client connections (port 4222) and leaf node connections (port 7422). Includes JetStream for persistence and streaming. Supports custom server names for identification in logs and monitoring.
+- **Agent (Leaf Node)**: Connects to the main server via TLS with client certificate authentication (port 4223). Has its own JetStream store. Each agent gets a unique server name based on its identifier.
 - **Certificate Chain**: Root CA signs both the main server certificate and leaf node certificate, establishing mutual trust
-- **JetStream**: Both main server and agent have JetStream enabled with separate store directories (./jetstream and ./jetstream-agent)
+- **JetStream**: Both main server and agent have JetStream enabled with separate store directories (./jetstream and ./jetstream-agent). Supports optional domain configuration for logical isolation of streams and consumers between different environments (e.g., production, staging, development).
+- **Server Naming**: Each server and agent can have a custom name (`server_name` in NATS config) for better identification in logs, monitoring, and management
+- **JetStream Domains**: Optional domain parameter allows logical separation of JetStream data across different deployments or environments
 
 ## Commands
 
@@ -53,8 +55,16 @@ This generates everything in one command:
 
 ### Certificate Generation (Individual)
 ```bash
-yarn cli server:init    # Generate Root CA and main server
-yarn cli agent:init     # Generate default agent (requires server:init first)
+# Generate Root CA and main server with optional name and domain
+yarn cli server:init [--name <name>] [--domain <domain>]
+# Examples:
+yarn cli server:init --name hub --domain production
+yarn cli server:init --name dev-server
+
+# Generate default agent (requires server:init first)
+yarn cli agent:init [--domain <domain>]
+# Example:
+yarn cli agent:init --domain production
 ```
 
 **Important**: `agent:init` will fail if Root CA doesn't exist. Always run `server:init` before `agent:init`.
@@ -66,10 +76,12 @@ yarn cli agent:list
 # or
 node dist/cli.js agent:list
 
-# Create a new agent with custom port and host
-yarn cli agent:create <name> [--port <port>] [--host <host>] [--replace]
-# Example:
+# Create a new agent with custom options
+yarn cli agent:create <name> [--port <port>] [--host <host>] [--domain <domain>] [--replace]
+# Examples:
 yarn cli agent:create worker-1 --port 4224 --host 0.0.0.0
+yarn cli agent:create worker-1 --domain production
+yarn cli agent:create worker-1 --port 4224 --domain staging
 
 # If agent exists, you'll be prompted to replace it
 # Use --replace flag to skip the prompt and force replacement
@@ -94,7 +106,7 @@ yarn cli agent:start worker-1 --debug
 
 **Agent Management Features:**
 - **agent:list** - Shows all agents with certificate and config status
-- **agent:create** - Generates certificate and config for a new agent in isolated directory. If agent exists, prompts for confirmation to replace (use --replace to skip prompt)
+- **agent:create** - Generates certificate and config for a new agent in isolated directory. Supports custom name, port, host, and JetStream domain. If agent exists, prompts for confirmation to replace (use --replace to skip prompt)
 - **agent:info** - Displays detailed information including certificate validity, port, host, and paths
 - **agent:edit** - Updates agent configuration (port, host, remote URL) without regenerating certificates
 - **agent:start** - Starts an agent using nats-server with optional debug/trace logging

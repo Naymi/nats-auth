@@ -6,6 +6,7 @@ export interface JetStreamConfig {
   store_dir: string;
   max_memory_store: string;
   max_file_store: string;
+  domain?: string;
 }
 
 export interface TLSConfig {
@@ -22,6 +23,7 @@ export interface LeafNodeRemote {
 
 export interface ServerConfig {
   port: number;
+  server_name?: string;
   jetstream: JetStreamConfig;
   leafnodes?: {
     port: number;
@@ -35,6 +37,7 @@ export interface ServerConfig {
 export interface AgentConfig {
   port: number;
   host: string;
+  server_name?: string;
   jetstream: JetStreamConfig;
   leafnodes: {
     remotes: LeafNodeRemote[];

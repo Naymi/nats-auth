@@ -44,6 +44,7 @@ export interface CreateAgentSpec {
   name: string;
   port: number;
   host: string;
+  domain?: string;
   replace?: boolean;
 }
 
@@ -160,7 +161,7 @@ export class AgentRegistry {
   }
 
   async create(spec: CreateAgentSpec): Promise<void> {
-    const { name, host, replace = false } = spec;
+    const { name, host, domain, replace = false } = spec;
     let { port } = spec;
 
     // Check if Root CA exists
@@ -176,7 +177,7 @@ export class AgentRegistry {
 
     // Check if agent already exists
     const agentExists = await this.exists(name);
-    
+
     // Remove existing agent if replacing
     if (agentExists && replace) {
       console.log(`🗑️  Removing existing agent: ${name}`);
@@ -197,7 +198,11 @@ export class AgentRegistry {
       console.log(`🔧 Creating agent: ${name}`);
       console.log(`   Directory: ${agentDir}`);
       console.log(`   Port: ${port}`);
-      console.log(`   Host: ${host}\n`);
+      console.log(`   Host: ${host}`);
+      if (domain) {
+        console.log(`   Domain: ${domain}`);
+      }
+      console.log();
 
       // Generate certificates using CA module
       const ca = new CertificateAuthority(new NodeOpenSSL(), this.fs);
@@ -211,7 +216,7 @@ export class AgentRegistry {
       const finalCertsDir = getAgentCertsDir(name);
       const finalConfigDir = getAgentConfigDir(name);
       const finalJetStreamDir = getAgentJetStreamDir(name);
-      await generateAgentConfig(CERTS_DIR, finalCertsDir, tempConfigDir, finalJetStreamDir, name, port, host);
+      await generateAgentConfig(CERTS_DIR, finalCertsDir, tempConfigDir, finalJetStreamDir, name, port, host, domain);
 
       console.log(`\n✨ Agent '${name}' created successfully!`);
       console.log(`   Directory: ${agentDir}`);

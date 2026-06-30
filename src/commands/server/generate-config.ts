@@ -4,7 +4,12 @@ import path from 'node:path';
 import { DEFAULT_CONFIG } from '../../core/config/defaults.js';
 import { NATSConfigBuilder } from '../../core/config/builder.js';
 
-export async function generateServerConfig(certsDir: string, configDir: string): Promise<void> {
+export async function generateServerConfig(
+  certsDir: string,
+  configDir: string,
+  serverName?: string,
+  domain?: string
+): Promise<void> {
   console.log('📝 Generating Main Server configuration...');
 
   const mainKeyPath = path.join(certsDir, 'main.key');
@@ -20,10 +25,12 @@ export async function generateServerConfig(certsDir: string, configDir: string):
   const config = builder.serverConfig({
     clientPort: server.clientPort,
     leafNodePort: server.leafNodePort,
+    serverName: serverName || server.serverName,
     jetstream: {
       storeDir: jetStreamStoreDir,
       maxMemoryStore: server.jetstream.maxMemoryStore,
       maxFileStore: server.jetstream.maxFileStore,
+      domain: domain || server.jetstream.domain,
     },
     tls: {
       certFile: mainCertPath,

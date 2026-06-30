@@ -11,7 +11,8 @@ export function registerAgentCommands(program: Command): void {
   program
     .command('agent:init')
     .description('Generate default agent (leaf node) certificate and configuration')
-    .action(async () => {
+    .option('-d, --domain <domain>', 'JetStream domain')
+    .action(async (options: { domain?: string }) => {
       const container = Container.getInstance();
       const available = await container.openssl.checkAvailable();
       if (!available) {
@@ -22,7 +23,7 @@ export function registerAgentCommands(program: Command): void {
 
       console.log('🚀 Generating default agent...\n');
 
-      await createAgent({ name: 'agent', port: 4223, host: '127.0.0.1' });
+      await createAgent({ name: 'agent', port: 4223, host: '127.0.0.1', domain: options.domain });
 
       console.log('\n✨ Agent setup complete!');
     });
@@ -91,6 +92,7 @@ export function registerAgentCommands(program: Command): void {
     .description('Create a new agent with certificate and configuration')
     .option('-p, --port <port>', 'Agent port', '4223')
     .option('-h, --host <host>', 'Agent host', '127.0.0.1')
+    .option('-d, --domain <domain>', 'JetStream domain')
     .option('-r, --replace', 'Replace existing agent if it exists', false)
     .action(async (name: string, options) => {
       const container = Container.getInstance();
@@ -124,6 +126,7 @@ export function registerAgentCommands(program: Command): void {
           name,
           port: parseInt(options.port),
           host: options.host,
+          domain: options.domain,
           replace: shouldReplace,
         });
       } catch (error) {

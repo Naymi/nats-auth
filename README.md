@@ -12,6 +12,8 @@ CLI-инструмент для генерации TLS сертификатов 
 - 👥 Менеджмент множественных агентов с уникальными именами
 - 📊 Просмотр статуса и детальной информации об агентах
 - ✏️ Редактирование конфигураций агентов без пересоздания сертификатов
+- 🏷️ Поддержка кастомных имен серверов (server_name) для идентификации в логах
+- 🌐 Поддержка JetStream доменов для логической изоляции потоков данных
 
 ## Требования
 
@@ -48,11 +50,18 @@ node dist/cli.js init
 #### Индивидуальная генерация
 
 ```bash
-# Генерация Root CA и main сервера
-yarn cli server:init
+# Генерация Root CA и main сервера с опциональным именем и доменом
+yarn cli server:init [--name <имя>] [--domain <домен>]
+
+# Примеры:
+yarn cli server:init --name hub --domain production
+yarn cli server:init --name dev-server
 
 # Генерация default агента (требует предварительного выполнения server:init)
-yarn cli agent:init
+yarn cli agent:init [--domain <домен>]
+
+# Пример:
+yarn cli agent:init --domain production
 ```
 
 #### Менеджмент агентов
@@ -62,11 +71,13 @@ yarn cli agent:init
 yarn cli agent:list
 
 # Создание нового агента с кастомными параметрами
-yarn cli agent:create <имя> [--port <порт>] [--host <хост>] [--replace]
+yarn cli agent:create <имя> [--port <порт>] [--host <хост>] [--domain <домен>] [--replace]
 
 # Примеры:
 yarn cli agent:create worker-1
 yarn cli agent:create worker-2 --port 4224 --host 0.0.0.0
+yarn cli agent:create worker-3 --domain production
+yarn cli agent:create worker-4 --port 4225 --domain staging
 
 # Если агент существует, будет запрошено подтверждение замены
 # Используйте --replace для автоматической замены без подтверждения
@@ -455,6 +466,35 @@ extendedKeyUsage = serverAuth,clientAuth
 
 ## Примеры использования
 
+### Использование имен серверов и JetStream доменов
+
+```bash
+# Создание production окружения с именем и доменом
+yarn cli server:init --name prod-hub --domain production
+
+# Создание агентов для production домена
+yarn cli agent:create prod-worker-1 --domain production
+yarn cli agent:create prod-worker-2 --port 4224 --domain production
+
+# Создание staging окружения
+yarn cli server:init --name staging-hub --domain staging
+yarn cli agent:create staging-worker --domain staging
+
+# Запуск серверов - имена будут видны в логах
+yarn cli server:start --debug
+# В логах: [INF] Name: prod-hub
+# В логах: [INF] Domain: production
+
+yarn cli agent:start prod-worker-1 --debug
+# В логах: [INF] Name: prod-worker-1
+# В логах: [INF] Domain: production
+```
+
+**Преимущества использования доменов:**
+- Логическая изоляция JetStream потоков между окружениями
+- Один main сервер может обслуживать несколько доменов
+- Упрощение управления в мульти-тенантных конфигурациях
+
 ### Типичный сценарий: создание инфраструктуры с несколькими агентами
 
 ```bash
@@ -526,6 +566,18 @@ A: Используйте `yarn cli agent:info <имя>` - команда пок
 
 **Q: Можно ли использовать агенты на разных машинах?**  
 A: Да, скопируйте директорию агента (`agents/<имя>/`) на целевую машину и обновите `remote-url` через `agent:edit`, указав внешний IP/hostname main сервера.
+
+**Q: Зачем нужны имена серверов (server_name)?**  
+A: Имена серверов помогают идентифицировать конкретные инстансы в логах, мониторинге и при отладке. Это особенно полезно при работе с несколькими серверами.
+
+**Q: Что такое JetStream домен и зачем он нужен?**  
+A: JetStream домен обеспечивает логическую изоляцию потоков и consumers между различными окружениями (production, staging, development). Серверы в одном домене видят только свои потоки данных.
+
+**Q: Можно ли изменить имя сервера или домен после создания?**  
+A: Имя сервера и домен задаются при генерации конфигурации. Для изменения нужно пересоздать конфигурацию командой `server:init` или `agent:create` с новыми параметрами.
+
+**Q: Обязательно ли указывать домен при создании агента?**  
+A: Нет, домен опционален. Если не указан, агент работает в глобальном пространстве JetStream без изоляции.
 
 ## Troubleshooting
 
