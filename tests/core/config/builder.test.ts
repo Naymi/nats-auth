@@ -10,6 +10,58 @@ describe('NATSConfigBuilder', () => {
   });
 
   describe('serverConfig', () => {
+    it('should quote server_name when provided', () => {
+      const config = builder.serverConfig({
+        clientPort: 4222,
+        leafNodePort: 7422,
+        serverName: 'test-server',
+        jetstream: {
+          storeDir: '/test/jetstream',
+          maxMemoryStore: '1GB',
+          maxFileStore: '10GB',
+        },
+        tls: {
+          certFile: '/test/certs/main.crt',
+          keyFile: '/test/certs/main.key',
+          caFile: '/test/certs/rootCA.crt',
+          verify: true,
+        },
+        logging: {
+          debug: false,
+          trace: false,
+          logtime: true,
+        },
+      });
+
+      expect(config).toContain('server_name: "test-server"');
+    });
+
+    it('should quote numeric server_name', () => {
+      const config = builder.serverConfig({
+        clientPort: 4222,
+        leafNodePort: 7422,
+        serverName: '1',
+        jetstream: {
+          storeDir: '/test/jetstream',
+          maxMemoryStore: '1GB',
+          maxFileStore: '10GB',
+        },
+        tls: {
+          certFile: '/test/certs/main.crt',
+          keyFile: '/test/certs/main.key',
+          caFile: '/test/certs/rootCA.crt',
+          verify: true,
+        },
+        logging: {
+          debug: false,
+          trace: false,
+          logtime: true,
+        },
+      });
+
+      expect(config).toContain('server_name: "1"');
+    });
+
     it('should generate complete server config', () => {
       const config = builder.serverConfig({
         clientPort: 4222,
@@ -123,6 +175,64 @@ describe('NATSConfigBuilder', () => {
   });
 
   describe('leafNodeConfig', () => {
+    it('should quote server_name when provided', () => {
+      const config = builder.leafNodeConfig({
+        port: 4223,
+        host: '127.0.0.1',
+        serverName: 'agent-1',
+        jetstream: {
+          storeDir: '/test/agent/jetstream',
+          maxMemoryStore: '1GB',
+          maxFileStore: '10GB',
+        },
+        remote: {
+          url: 'tls://localhost:7422',
+          tls: {
+            certFile: '/test/agent.crt',
+            keyFile: '/test/agent.key',
+            caFile: '/test/rootCA.crt',
+            verify: true,
+          },
+        },
+        logging: {
+          debug: false,
+          trace: false,
+          logtime: true,
+        },
+      });
+
+      expect(config).toContain('server_name: "agent-1"');
+    });
+
+    it('should quote numeric server_name', () => {
+      const config = builder.leafNodeConfig({
+        port: 4223,
+        host: '127.0.0.1',
+        serverName: '1',
+        jetstream: {
+          storeDir: '/test/agent/jetstream',
+          maxMemoryStore: '1GB',
+          maxFileStore: '10GB',
+        },
+        remote: {
+          url: 'tls://localhost:7422',
+          tls: {
+            certFile: '/test/agent.crt',
+            keyFile: '/test/agent.key',
+            caFile: '/test/rootCA.crt',
+            verify: true,
+          },
+        },
+        logging: {
+          debug: false,
+          trace: false,
+          logtime: true,
+        },
+      });
+
+      expect(config).toContain('server_name: "1"');
+    });
+
     it('should generate complete leaf node config', () => {
       const config = builder.leafNodeConfig({
         port: 4223,

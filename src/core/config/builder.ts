@@ -50,7 +50,7 @@ export class NATSConfigBuilder {
     ];
 
     if (options.serverName) {
-      sections.push(`server_name: ${options.serverName}`);
+      sections.push(`server_name: "${options.serverName}"`);
     }
 
     sections.push(
@@ -74,7 +74,7 @@ export class NATSConfigBuilder {
     ];
 
     if (options.serverName) {
-      sections.push(`server_name: ${options.serverName}`);
+      sections.push(`server_name: "${options.serverName}"`);
     }
 
     sections.push(

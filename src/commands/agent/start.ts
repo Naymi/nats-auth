@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import { AGENTS_DIR } from "../../shared/paths.js";
 import { Container } from '../../core/container.js';
+import { createAgent } from './create.js';
 
 export interface StartAgentOptions {
   name: string;
@@ -12,18 +13,25 @@ export async function startAgent(options: StartAgentOptions): Promise<void> {
   const { name, debug = false, trace = false } = options;
 
   const container = Container.getInstance();
-  const agentDetails = await container.agentRegistry.get(name);
+  let agentDetails = await container.agentRegistry.get(name);
 
-  if (!agentDetails) {
-    throw new Error(`Agent '${name}' not found`);
-  }
+  if (!agentDetails || !agentDetails.hasConfig || !agentDetails.hasCertificate) {
+    console.log(`📦 Agent '${name}' not found or incomplete. Creating...\n`);
 
-  if (!agentDetails.hasConfig) {
-    throw new Error(`Agent '${name}' has no configuration file`);
-  }
+    await createAgent({
+      name,
+      port: 4223,
+      host: '127.0.0.1'
+    });
 
-  if (!agentDetails.hasCertificate) {
-    throw new Error(`Agent '${name}' has no certificate`);
+    console.log('\n✅ Agent initialized successfully!\n');
+
+    // Refresh agent details after creation
+    agentDetails = await container.agentRegistry.get(name);
+
+    if (!agentDetails) {
+      throw new Error(`Failed to create agent '${name}'`);
+    }
   }
 
   const configPath = join(AGENTS_DIR, name, 'config', `${name}.conf`);
