@@ -49,6 +49,48 @@
       "skillPath": "skills/node/SKILL.md",
       "computedHash": "aba2163ddb3fcf3e6a9d101ac370fabc94055b3e628b125dd084969f1a945993"
     },
+    "node-async-patterns": {
+      "source": "Naymi/mcolina-skills",
+      "sourceType": "github",
+      "skillPath": "skills/node/async_patterns/SKILL.md",
+      "computedHash": "5b83d6c279abb2334ff10f81e60b3c8bd3b34b289a53c0949eb7af73ee7bc1a8"
+    },
+    "node-environment": {
+      "source": "Naymi/mcolina-skills",
+      "sourceType": "github",
+      "skillPath": "skills/node/environment/SKILL.md",
+      "computedHash": "a5eb245d0a4fe0bf7a2e2896d8e30fe549f10961b13a23fb99c941b62a9184ca"
+    },
+    "node-graceful-shutdown": {
+      "source": "Naymi/mcolina-skills",
+      "sourceType": "github",
+      "skillPath": "skills/node/graceful_shutdown/SKILL.md",
+      "computedHash": "2c61d6045b001be3456d6b207f405c4686324e7e165ea460cda94b52633ed1f1"
+    },
+    "node-modules": {
+      "source": "Naymi/mcolina-skills",
+      "sourceType": "github",
+      "skillPath": "skills/node/modules/SKILL.md",
+      "computedHash": "2164bb21ac5fdf9d33930f3835f916bf1f6e0c1a3311a1501e11b15951330e74"
+    },
+    "node-modules-exploration": {
+      "source": "Naymi/mcolina-skills",
+      "sourceType": "github",
+      "skillPath": "skills/node/modules_exploration/SKILL.md",
+      "computedHash": "38d82aacd627756846be2b8d1e53bb790fb54b5e84cffca9b5207bd66a85db56"
+    },
+    "node-typescript": {
+      "source": "Naymi/mcolina-skills",
+      "sourceType": "github",
+      "skillPath": "skills/node/typescript/SKILL.md",
+      "computedHash": "f79d2d998a6b53285df9afe7b5f767fdb99a55b44d581dc26d17d3f11baadf8f"
+    },
+    "nodejs-core": {
+      "source": "Naymi/mcolina-skills",
+      "sourceType": "github",
+      "skillPath": "skills/nodejs-core/SKILL.md",
+      "computedHash": "3d358d412d95e38d06bbfadab64b20da4aeafafd4dac8a95f3f3cad3bba40882"
+    },
     "ripgrep": {
       "source": "ratacat/claude-skills",
       "sourceType": "github",
