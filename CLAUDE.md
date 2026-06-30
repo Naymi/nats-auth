@@ -102,11 +102,20 @@ node dist/cli.js agent:start <name>
 # Example:
 yarn cli agent:start agent
 yarn cli agent:start worker-1 --debug
+
+# Delete an agent
+yarn cli agent:delete <name> [--yes]
+# or
+node dist/cli.js agent:delete <name>
+# Example:
+yarn cli agent:delete worker-1
+yarn cli agent:delete worker-1 --yes  # Skip confirmation prompt
 ```
 
 **Agent Management Features:**
 - **agent:list** - Shows all agents with certificate and config status
 - **agent:create** - Generates certificate and config for a new agent in isolated directory. Supports custom name, port, host, and JetStream domain. If agent exists, prompts for confirmation to replace (use --replace to skip prompt)
+- **agent:delete** - Removes an agent and all its files (certificates, configuration, and data). Prompts for confirmation unless --yes flag is used
 - **agent:info** - Displays detailed information including certificate validity, port, host, and paths
 - **agent:edit** - Updates agent configuration (port, host, remote URL) without regenerating certificates
 - **agent:start** - Starts an agent using nats-server with optional debug/trace logging
@@ -234,6 +243,7 @@ The CLI tool (`src/cli.ts`) uses Commander.js and orchestrates feature modules:
 - **agent:info** - Show detailed agent information
 - **agent:edit** - Edit agent configuration
 - **agent:start** - Start an agent using nats-server
+- **agent:delete** - Delete an agent and all its files
 
 Core modules are organized in `src/core/`:
 - **certificates/** - Certificate Authority and adapters (OpenSSL, filesystem)

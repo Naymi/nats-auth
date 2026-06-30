@@ -2,6 +2,7 @@ import type { Command } from 'commander';
 import { confirm } from '@inquirer/prompts';
 import { Container } from '../../core/container.js';
 import { createAgent } from '../../commands/agent/create.js';
+import { deleteAgent } from '../../commands/agent/delete.js';
 import { editAgentConfig } from '../../commands/agent/edit.js';
 import { getAgentInfo } from '../../commands/agent/info.js';
 import { listAgents } from '../../commands/agent/list.js';
@@ -156,5 +157,35 @@ export function registerAgentCommands(program: Command): void {
     .option('-V, --trace', 'Enable trace logging', false)
     .action(async (name: string, options: { debug?: boolean; trace?: boolean }) => {
       await startAgent({ name, ...options });
+    });
+
+  program
+    .command('agent:delete <name>')
+    .description('Delete an agent and all its files')
+    .option('-y, --yes', 'Skip confirmation prompt', false)
+    .action(async (name: string, options: { yes?: boolean }) => {
+      const container = Container.getInstance();
+      const exists = await container.agentRegistry.exists(name);
+
+      if (!exists) {
+        console.log(`❌ Agent '${name}' does not exist`);
+        process.exit(1);
+      }
+
+      let shouldDelete = options.yes;
+
+      if (!shouldDelete) {
+        shouldDelete = await confirm({
+          message: `Are you sure you want to delete agent '${name}'? This will remove all certificates, configuration, and data.`,
+          default: false,
+        });
+
+        if (!shouldDelete) {
+          console.log('❌ Operation cancelled.');
+          process.exit(0);
+        }
+      }
+
+      await deleteAgent({ name });
     });
 }

@@ -62,6 +62,10 @@ export const CreateAgentOptionsSchema = z.object({
   replace: z.boolean().optional().default(false),
 });
 
+export const DeleteAgentOptionsSchema = z.object({
+  name: AgentNameSchema,
+});
+
 /**
  * Schema for editing agent configuration
  */
