@@ -2,6 +2,16 @@
  * TypeScript interfaces for NATS configuration structures
  */
 
+export interface NATSAccount {
+  name: string;
+  users: Array<{ user: string }>;
+}
+
+export interface NATSLeafNodeAuth {
+  user: string;
+  account: string;
+}
+
 export interface JetStreamConfig {
   store_dir: string;
   max_memory_store: string;
@@ -14,6 +24,7 @@ export interface TLSConfig {
   key_file: string;
   ca_file: string;
   verify: boolean;
+  verify_and_map?: boolean;
 }
 
 export interface LeafNodeRemote {
@@ -24,10 +35,14 @@ export interface LeafNodeRemote {
 export interface ServerConfig {
   port: number;
   server_name?: string;
+  accounts?: NATSAccount[];
   jetstream: JetStreamConfig;
   leafnodes?: {
     port: number;
     tls: TLSConfig;
+    authorization?: {
+      users: NATSLeafNodeAuth[];
+    };
   };
   debug: boolean;
   trace: boolean;

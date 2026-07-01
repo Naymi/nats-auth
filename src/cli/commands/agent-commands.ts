@@ -7,6 +7,8 @@ import { editAgentConfig } from '../../commands/agent/edit.js';
 import { getAgentInfo } from '../../commands/agent/info.js';
 import { listAgents } from '../../commands/agent/list.js';
 import { startAgent } from '../../commands/agent/start.js';
+import { createAgentContext } from '../../commands/agent/create-context.js';
+import { executeAgentNats } from '../../commands/agent/nats.js';
 
 export function registerAgentCommands(program: Command): void {
   program
@@ -163,7 +165,8 @@ export function registerAgentCommands(program: Command): void {
     .command('agent:delete <name>')
     .description('Delete an agent and all its files')
     .option('-y, --yes', 'Skip confirmation prompt', false)
-    .action(async (name: string, options: { yes?: boolean }) => {
+    .option('--keep-context', 'Keep the NATS context after deleting agent', false)
+    .action(async (name: string, options: { yes?: boolean; keepContext?: boolean }) => {
       const container = Container.getInstance();
       const exists = await container.agentRegistry.exists(name);
 
@@ -187,5 +190,35 @@ export function registerAgentCommands(program: Command): void {
       }
 
       await deleteAgent({ name });
+
+      // Delete associated NATS context unless --keep-context is specified
+      if (!options.keepContext) {
+        const contextName = `nats-auth-agent-${name}`;
+        const contextExists = await container.contextManager.contextExists(contextName);
+
+        if (contextExists) {
+          try {
+            await container.contextManager.deleteContext(contextName);
+            console.log(`✅ Context '${contextName}' deleted`);
+          } catch (error) {
+            console.log(`⚠️  Failed to delete context '${contextName}'`);
+          }
+        }
+      }
+    });
+
+  program
+    .command('agent:context <name>')
+    .description('Create or update NATS context for an agent')
+    .action(async (name: string) => {
+      await createAgentContext({ name });
+    });
+
+  program
+    .command('agent:nats <name> [args...]')
+    .description('Execute nats CLI commands with agent context')
+    .allowUnknownOption()
+    .action(async (name: string, args: string[]) => {
+      await executeAgentNats({ name, args });
     });
 }

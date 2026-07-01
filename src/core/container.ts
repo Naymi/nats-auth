@@ -4,6 +4,8 @@ import { AgentRegistry } from './agent/registry.js';
 import { CertificateAuthority } from './certificates/authority.js';
 import { NATSConfigBuilder } from './config/builder.js';
 import { NATSProcessRunner } from './process/runner.js';
+import { NATSContextManager } from './nats/context-manager.js';
+import { NATSCLIProxy } from './nats/cli-proxy.js';
 import type { FileSystemAdapter } from './certificates/adapters/filesystem.js';
 import type { OpenSSLAdapter } from './certificates/adapters/openssl.js';
 
@@ -16,6 +18,8 @@ export class Container {
   readonly certificateAuthority: CertificateAuthority;
   readonly configBuilder: NATSConfigBuilder;
   readonly processRunner: NATSProcessRunner;
+  readonly contextManager: NATSContextManager;
+  readonly cliProxy: NATSCLIProxy;
 
   private constructor() {
     this.fileSystem = new NodeFileSystem();
@@ -24,6 +28,8 @@ export class Container {
     this.certificateAuthority = new CertificateAuthority(this.openssl, this.fileSystem);
     this.configBuilder = new NATSConfigBuilder();
     this.processRunner = new NATSProcessRunner();
+    this.contextManager = new NATSContextManager();
+    this.cliProxy = new NATSCLIProxy();
   }
 
   static getInstance(): Container {

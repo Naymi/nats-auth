@@ -104,18 +104,19 @@ yarn cli agent:start agent
 yarn cli agent:start worker-1 --debug
 
 # Delete an agent
-yarn cli agent:delete <name> [--yes]
+yarn cli agent:delete <name> [--yes] [--keep-context]
 # or
 node dist/cli.js agent:delete <name>
 # Example:
 yarn cli agent:delete worker-1
 yarn cli agent:delete worker-1 --yes  # Skip confirmation prompt
+yarn cli agent:delete worker-1 --yes --keep-context  # Keep NATS context after deletion
 ```
 
 **Agent Management Features:**
 - **agent:list** - Shows all agents with certificate and config status
 - **agent:create** - Generates certificate and config for a new agent in isolated directory. Supports custom name, port, host, and JetStream domain. If agent exists, prompts for confirmation to replace (use --replace to skip prompt)
-- **agent:delete** - Removes an agent and all its files (certificates, configuration, and data). Prompts for confirmation unless --yes flag is used
+- **agent:delete** - Removes an agent and all its files (certificates, configuration, and data). Automatically deletes associated NATS context unless --keep-context is specified. Prompts for confirmation unless --yes flag is used
 - **agent:info** - Displays detailed information including certificate validity, port, host, and paths
 - **agent:edit** - Updates agent configuration (port, host, remote URL) without regenerating certificates
 - **agent:start** - Starts an agent using nats-server with optional debug/trace logging
@@ -163,6 +164,66 @@ nats-server -c agents/agent/config/agent.conf
 # Custom agents
 nats-server -c agents/<agent-name>/config/<agent-name>.conf
 ```
+
+### NATS Context Management
+
+The CLI integrates with NATS CLI for easy server and agent management.
+
+**Use NATS CLI directly (recommended):**
+```bash
+# Execute nats commands with server (works immediately, no setup needed)
+yarn cli server:nats <nats-args...>
+# Examples:
+yarn cli server:nats server info
+yarn cli server:nats stream list
+yarn cli server:nats pub test.subject "hello"
+
+# Execute nats commands with agent (works immediately, no setup needed)
+yarn cli agent:nats <name> <nats-args...>
+# Examples:
+yarn cli agent:nats 1 server info
+yarn cli agent:nats worker-1 stream list
+yarn cli agent:nats worker-1 consumer list mystream
+```
+
+**Optional: Create saved contexts for convenience:**
+```bash
+# Create context for main server (optional)
+yarn cli server:context
+
+# Create context for an agent (optional)
+yarn cli agent:context <name>
+# Example:
+yarn cli agent:context worker-1
+```
+
+**Manage contexts (optional):**
+```bash
+# List all contexts (highlights project contexts)
+yarn cli context:list
+
+# Select a context as default
+yarn cli context:select <context-name>
+# Example:
+yarn cli context:select nats-auth-server
+
+# Delete a specific context
+yarn cli context:delete <context-name>
+
+# Clean all project contexts (nats-auth-*)
+yarn cli context:clean
+yarn cli context:clean --yes  # Skip confirmation
+```
+
+**Context naming convention:**
+- Server: `nats-auth-server`
+- Agents: `nats-auth-agent-<name>` (e.g., `nats-auth-agent-worker-1`)
+
+**How it works:**
+- `agent:nats` and `server:nats` automatically pass connection details and credentials to NATS CLI
+- No pre-configuration needed - commands work immediately after agent/server initialization
+- Context commands are optional convenience features for users who prefer saved configurations
+- When deleting an agent with `agent:delete`, its NATS context is automatically removed unless `--keep-context` flag is used
 
 ## Project Structure
 
@@ -236,14 +297,22 @@ The CLI tool (`src/cli.ts`) uses Commander.js and orchestrates feature modules:
 - **init** - Full setup (Root CA + main server + default agent)
 - **server:init** - Generate Root CA and main server components
 - **server:start** - Start the main NATS server
+- **server:context** - Create NATS context for the main server
+- **server:nats** - Proxy nats CLI commands with server context
 - **agent:init** - Generate default agent in agents/agent/ directory
+- **agent:context** - Create NATS context for an agent
+- **agent:nats** - Proxy nats CLI commands with agent context
 - **clean** (alias: clear) - Remove all generated files (certs, config, agents)
 - **agent:list** - List all agents with status
 - **agent:create** - Create new agent with custom name and options in separate directory
 - **agent:info** - Show detailed agent information
 - **agent:edit** - Edit agent configuration
 - **agent:start** - Start an agent using nats-server
-- **agent:delete** - Delete an agent and all its files
+- **agent:delete** - Delete an agent and all its files (optionally keeps NATS context)
+- **context:list** - List all NATS contexts (highlights project contexts)
+- **context:select** - Select a context as default
+- **context:delete** - Delete a specific NATS context
+- **context:clean** - Remove all project-related contexts
 
 Core modules are organized in `src/core/`:
 - **certificates/** - Certificate Authority and adapters (OpenSSL, filesystem)
@@ -256,6 +325,9 @@ Core modules are organized in `src/core/`:
 - **agent/** - Agent registry and path management
   - `registry.ts` - AgentRegistry class (agent lifecycle operations)
   - `paths.ts` - Agent path helpers
+- **nats/** - NATS CLI integration
+  - `context-manager.ts` - NATSContextManager class (context lifecycle operations)
+  - `cli-proxy.ts` - NATSCLIProxy class (proxy nats CLI commands)
 - **domain/** - Domain models and value objects
   - `agent-name.ts` - AgentName value object with validation rules
 - **validation/** - Zod schemas and validators

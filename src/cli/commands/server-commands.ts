@@ -2,6 +2,8 @@ import type { Command } from 'commander';
 import { Container } from '../../core/container.js';
 import { generateServerConfig } from '../../commands/server/generate-config.js';
 import { startServer } from '../../commands/server/start.js';
+import { createServerContext } from '../../commands/server/create-context.js';
+import { executeServerNats } from '../../commands/server/nats.js';
 import { ensureDir } from '../../shared/fs.js';
 import { CERTS_DIR, CONFIG_DIR } from '../../shared/paths.js';
 
@@ -39,5 +41,20 @@ export function registerServerCommands(program: Command): void {
     .option('-V, --trace', 'Enable trace logging', false)
     .action(async (options: { debug?: boolean; trace?: boolean }) => {
       await startServer(options);
+    });
+
+  program
+    .command('server:context')
+    .description('Create or update NATS context for the main server')
+    .action(async () => {
+      await createServerContext();
+    });
+
+  program
+    .command('server:nats [args...]')
+    .description('Execute nats CLI commands with server context')
+    .allowUnknownOption()
+    .action(async (args: string[]) => {
+      await executeServerNats({ args });
     });
 }

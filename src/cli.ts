@@ -4,6 +4,7 @@ import { ZodError } from 'zod';
 import { registerAgentCommands } from './cli/commands/agent-commands.js';
 import { registerServerCommands } from './cli/commands/server-commands.js';
 import { registerInitCommands } from './cli/commands/init-commands.js';
+import { registerContextCommands } from './cli/commands/context-commands.js';
 
 function handleError(error: unknown): void {
   if (error instanceof ZodError) {
@@ -33,6 +34,7 @@ program
 registerInitCommands(program);
 registerServerCommands(program);
 registerAgentCommands(program);
+registerContextCommands(program);
 
 program.parse(process.argv);
 

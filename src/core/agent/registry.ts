@@ -4,9 +4,11 @@ import path from 'node:path';
 import getPort from 'get-port';
 
 import { DEFAULT_CONFIG } from '../config/defaults.js';
-import { CERTS_DIR } from '../../shared/paths.js';
+import { CERTS_DIR, CONFIG_DIR } from '../../shared/paths.js';
 import { CertificateAuthority } from '../certificates/authority.js';
 import { NodeOpenSSL } from '../certificates/adapters/openssl.js';
+import { NATSConfigBuilder } from '../config/builder.js';
+import { NATSConfigManager } from '../config/manager.js';
 
 import { FileSystemAdapter } from '../certificates/adapters/filesystem.js';
 import { generateAgentConfig } from '../../commands/agent/generate-config.js';
@@ -181,10 +183,14 @@ export class AgentRegistry {
     // Remove existing agent if replacing
     if (agentExists && replace) {
       console.log(`🗑️  Removing existing agent: ${name}`);
-      await this.fs.removeDir(agentDir);
+      await this.delete(name); // Use delete method to also remove from accounts
     } else if (agentExists && !replace) {
       throw new Error(`Agent '${name}' already exists. Use --replace flag to overwrite or confirm replacement when prompted.`);
     }
+
+    // Generate agent email for certificate SAN and account user
+    const agentEmail = `agent-${name}@${DEFAULT_CONFIG.account.emailDomain}`;
+    const accountName = `${DEFAULT_CONFIG.account.accountPrefix}${name}`;
 
     // Create agent atomically using transaction
     await this.withTransaction(agentDir, async (tempDir) => {
@@ -199,18 +205,23 @@ export class AgentRegistry {
       console.log(`   Directory: ${agentDir}`);
       console.log(`   Port: ${port}`);
       console.log(`   Host: ${host}`);
+      console.log(`   Email: ${agentEmail}`);
+      console.log(`   Account: ${accountName}`);
       if (domain) {
         console.log(`   Domain: ${domain}`);
       }
       console.log();
 
-      // Generate certificates using CA module
+      // Generate certificates with email SAN using CA module
       const ca = new CertificateAuthority(new NodeOpenSSL(), this.fs);
       const rootCA = {
         keyPath: path.join(CERTS_DIR, 'rootCA.key'),
         certPath: path.join(CERTS_DIR, 'rootCA.crt'),
       };
-      await ca.issueLeafCert(rootCA, name, { certsDir: tempCertsDir });
+      await ca.issueLeafCert(rootCA, name, { 
+        certsDir: tempCertsDir,
+        email: agentEmail, // Add email to certificate SAN
+      });
 
       // Generate config with final paths (not temp paths)
       const finalCertsDir = getAgentCertsDir(name);
@@ -222,8 +233,12 @@ export class AgentRegistry {
       console.log(`   Directory: ${agentDir}`);
       console.log(`   Certificate: ${getAgentCertsDir(name)}/${name}.crt`);
       console.log(`   Config: ${getAgentConfigDir(name)}/${name}.conf`);
-      console.log(`\nStart with: nats-server -c ${getAgentConfigDir(name)}/${name}.conf`);
     });
+
+    // After successful agent creation, add account to main server config
+    await this.addAgentAccount(name, agentEmail, accountName);
+
+    console.log(`\nStart with: nats-server -c ${getAgentConfigDir(name)}/${name}.conf`);
   }
 
   async update(name: string, changes: AgentChanges): Promise<void> {
@@ -265,7 +280,50 @@ export class AgentRegistry {
 
   async delete(name: string): Promise<void> {
     const agentDir = getAgentDir(name);
+    
+    // Remove agent account from main server config first
+    await this.removeAgentAccount(name);
+    
+    // Then remove agent directory
     await this.fs.removeDir(agentDir);
+  }
+
+  private async addAgentAccount(name: string, email: string, accountName: string): Promise<void> {
+    const mainConfigPath = path.join(CONFIG_DIR, 'main.conf');
+    const configManager = new NATSConfigManager(mainConfigPath, new NATSConfigBuilder(), this.fs);
+
+    await configManager.addAccount(
+      {
+        name: accountName,
+        users: [{ user: email }],
+      },
+      {
+        user: email,
+        account: accountName,
+      },
+    );
+
+    console.log(`✅ Account '${accountName}' added to main server configuration`);
+  }
+
+  private async removeAgentAccount(name: string): Promise<void> {
+    const mainConfigPath = path.join(CONFIG_DIR, 'main.conf');
+    
+    // Check if main config exists
+    const configExists = await this.fs.exists(mainConfigPath);
+    if (!configExists) {
+      // If main config doesn't exist, nothing to remove
+      return;
+    }
+
+    const agentEmail = `agent-${name}@${DEFAULT_CONFIG.account.emailDomain}`;
+    const accountName = `${DEFAULT_CONFIG.account.accountPrefix}${name}`;
+
+    const configManager = new NATSConfigManager(mainConfigPath, new NATSConfigBuilder(), this.fs);
+
+    await configManager.removeAccount(accountName, agentEmail);
+
+    console.log(`✅ Account '${accountName}' removed from main server configuration`);
   }
 
   async checkPortConflict(port: number, excludeName?: string): Promise<void> {

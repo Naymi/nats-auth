@@ -1,6 +1,32 @@
 import { z } from 'zod';
 
 /**
+ * Validate account user (email format)
+ */
+export const AccountUserSchema = z.object({
+  user: z.string().email('User must be a valid email address'),
+});
+
+/**
+ * Validate account (name and users)
+ */
+export const AccountSchema = z.object({
+  name: z
+    .string()
+    .min(1, 'Account name is required')
+    .regex(/^[A-Z_][A-Z0-9_]*$/, 'Account name must be uppercase with underscores'),
+  users: z.array(AccountUserSchema).min(1, 'Account must have at least one user'),
+});
+
+/**
+ * Validate leafnode authorization entry
+ */
+export const LeafNodeAuthSchema = z.object({
+  user: z.string().email('User must be a valid email address'),
+  account: z.string().min(1, 'Account name is required'),
+});
+
+/**
  * Validate agent name (only letters, numbers, hyphens, and underscores)
  */
 export const AgentNameSchema = z

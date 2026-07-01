@@ -43,6 +43,21 @@ export async function generateAgentConfig(
       },
     },
     logging: agent.logging,
+    systemAccount: DEFAULT_CONFIG.account.systemAccount,
+    noAuthUser: DEFAULT_CONFIG.account.systemUser,
+    accounts: [
+      {
+        name: DEFAULT_CONFIG.account.systemAccount,
+        users: [{ user: DEFAULT_CONFIG.account.systemUser, password: '' }],
+        exports: [
+          { service: '$SYS.REQ.SERVER.>' },
+          { service: '$SYS.REQ.ACCOUNT.>.CLAIMS.LOOKUP' },
+          { service: '$SYS.REQ.ACCOUNT.>.CLAIMS.UPDATE' },
+          { service: '$SYS.REQ.ACCOUNT.>.CLAIMS.DELETE' },
+          { service: '$SYS.REQ.USER.INFO' },
+        ],
+      },
+    ],
   });
 
   const configPath = path.join(agentConfigDir, `${name}.conf`);

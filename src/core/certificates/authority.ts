@@ -38,6 +38,7 @@ export interface LeafCertOptions {
   validityDays?: number;
   keySize?: number;
   subject?: Subject;
+  email?: string;
 }
 
 export class CertificateAuthority {
@@ -142,6 +143,7 @@ export class CertificateAuthority {
         locality: 'City',
         organization: 'Organization',
       },
+      email,
     } = options;
 
     console.log(`🔐 Generating certificate for agent: ${name}...`);
@@ -155,6 +157,7 @@ export class CertificateAuthority {
       validityDays,
       keySize,
       subject,
+      email,
     });
 
     console.log(`✅ Certificate for '${name}' generated`);
@@ -169,8 +172,9 @@ export class CertificateAuthority {
     validityDays: number;
     keySize: number;
     subject: Subject;
+    email?: string;
   }): Promise<void> {
-    const { name, commonName, certsDir, caKeyPath, caCertPath, validityDays, keySize, subject } =
+    const { name, commonName, certsDir, caKeyPath, caCertPath, validityDays, keySize, subject, email } =
       options;
 
     const keyPath = path.join(certsDir, `${name}.key`);
@@ -179,8 +183,8 @@ export class CertificateAuthority {
     const extFilePath = path.join(certsDir, `${name}.ext`);
 
     try {
-      // Generate SAN extension file
-      const extContent = this.buildSANExtension();
+      // Generate SAN extension file with optional email
+      const extContent = this.buildSANExtension(email);
       await this.fs.writeFile(extFilePath, extContent);
 
       // Generate private key
@@ -193,7 +197,7 @@ export class CertificateAuthority {
       const subjectString = `/C=${subject.country}/ST=${subject.state}/L=${subject.locality}/O=${subject.organization}/CN=${commonName}`;
 
       await this.openssl.execute(
-        ['req', '-new', '-key', keyPath, '-out', csrPath, '-subj', `"${subjectString}"`],
+        ['req', '-new', '-key', keyPath, '-out', csrPath, '-subj', `\"${subjectString}\"`],
         `generate CSR for ${name}`
       );
 
@@ -227,8 +231,18 @@ export class CertificateAuthority {
     }
   }
 
-  private buildSANExtension(): string {
+  private buildSANExtension(email?: string): string {
     const hostName = hostname();
+    const altNames = [
+      'DNS.1 = localhost',
+      `DNS.2 = ${hostName}`,
+      'IP.1 = 127.0.0.1',
+    ];
+
+    if (email) {
+      altNames.push(`email.1 = ${email}`);
+    }
+
     return `
 authorityKeyIdentifier=keyid,issuer
 basicConstraints=CA:FALSE
@@ -237,9 +251,7 @@ extendedKeyUsage = serverAuth, clientAuth
 subjectAltName = @alt_names
 
 [alt_names]
-DNS.1 = localhost
-DNS.2 = ${hostName}
-IP.1 = 127.0.0.1
+${altNames.join('\n')}
 `;
   }
 

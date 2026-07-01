@@ -37,8 +37,25 @@ export async function generateServerConfig(
       keyFile: mainKeyPath,
       caFile: rootCertPath,
       verify: true,
+      verifyAndMap: true, // Enable certificate-to-user mapping
     },
     logging: server.logging,
+    systemAccount: DEFAULT_CONFIG.account.systemAccount,
+    noAuthUser: DEFAULT_CONFIG.account.systemUser,
+    accounts: [
+      {
+        name: DEFAULT_CONFIG.account.systemAccount,
+        users: [{ user: DEFAULT_CONFIG.account.systemUser, password: '' }],
+        exports: [
+          { service: '$SYS.REQ.SERVER.>' },
+          { service: '$SYS.REQ.ACCOUNT.>.CLAIMS.LOOKUP' },
+          { service: '$SYS.REQ.ACCOUNT.>.CLAIMS.UPDATE' },
+          { service: '$SYS.REQ.ACCOUNT.>.CLAIMS.DELETE' },
+          { service: '$SYS.REQ.USER.INFO' },
+        ],
+      },
+    ], // SYS account for client connections with monitoring exports
+    leafNodeAuth: [], // Empty initially, auth entries added when agents are created
   });
 
   const configPath = path.join(configDir, 'main.conf');
